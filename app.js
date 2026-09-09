@@ -87,36 +87,37 @@ function setupSkillDragAndDrop(cardEl, card, index) {
   let cloneEl = null;
   let startX = 0;
   let startY = 0;
-  let hasMoved = false;
 
   cardEl.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
 
     startX = e.clientX;
     startY = e.clientY;
-    hasMoved = false;
-
-    // スマホでのスクロール干渉を防ぐためキャプチャ
     cardEl.setPointerCapture(e.pointerId);
 
     const onPointerMove = (moveEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
 
-      // 5px以上動いたらドラッグとみなす
+      // 少し動かしたらドラッグ開始とみなす
       if (!cloneEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        hasMoved = true;
         cloneEl = cardEl.cloneNode(true);
         cloneEl.classList.add('skill-card-dragging');
         document.body.appendChild(cloneEl);
         cardEl.style.opacity = '0.4';
+
+        // ★【重要】ドラッグ開始した瞬間に邪魔なモーダルを隠す！
+        if (elements.modalSkills) {
+          elements.modalSkills.classList.remove('show');
+          elements.modalSkills.classList.add('hidden');
+        }
       }
 
       if (cloneEl) {
         cloneEl.style.left = `${moveEvent.clientX - 45}px`;
         cloneEl.style.top = `${moveEvent.clientY - 65}px`;
 
-        // ★重要：クローン要素を一時的に非表示（または pointer-events: none）にして下にあるセルを検知させる
+        // クローンを一時隠して、下にあるセルを検知できるようにする
         cloneEl.style.display = 'none';
         const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
         cloneEl.style.display = 'block';
@@ -138,7 +139,6 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       document.querySelectorAll('.board-cell').forEach(cell => cell.classList.remove('drag-over'));
 
       if (cloneEl) {
-        // ドラッグしてドロップした場合の判定
         cloneEl.style.display = 'none';
         const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
         cloneEl.remove();
@@ -147,22 +147,22 @@ function setupSkillDragAndDrop(cardEl, card, index) {
         const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
 
         if (boardCell) {
-          // 盤面にドロップ成功
-          closeSkillModalSmooth(() => {
-            state.hands[state.currentPlayer].splice(index, 1);
-            executeSkill(card.id, boardCell);
-            renderGame();
-          });
-        } else {
-          // 盤面以外にドロップした場合は手札に戻る（何もしない）
-        }
-      } else if (!hasMoved) {
-        // ドラッグされずにただのクリック（タップ）だった場合：その場でスキル発動
-        closeSkillModalSmooth(() => {
+          // 盤面にドロップ成功：モーダルを完全に閉じてスキル発動
+          const modal = document.getElementById('skill-modal');
+          if (modal) modal.style.display = 'none';
+
           state.hands[state.currentPlayer].splice(index, 1);
-          executeSkill(card.id);
+          executeSkill(card.id, boardCell);
           renderGame();
-        });
+        } else {
+          // 盤面以外で離してしまった場合：モーダルを元に戻す
+          if (elements.modalSkills) {
+            elements.modalSkills.classList.remove('hidden');
+            requestAnimationFrame(() => {
+              elements.modalSkills.classList.add('show');
+            });
+          }
+        }
       }
     };
 
