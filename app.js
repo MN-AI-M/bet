@@ -53,7 +53,111 @@ const elements = {
   resultTitle: document.getElementById('result-title'),
   resultMessage: document.getElementById('result-message')
 };
+/* =======================================
+   背景デモ対戦 (Bot vs Bot) ロジック
+======================================= */
+let bgDemoInterval = null;
+let bgBoardState = [];
+let bgCurrentPlayer = 1;
 
+function initBgDemo() {
+  const bgBoardEl = document.getElementById('bg-board');
+  if (!bgBoardEl) return;
+
+  // 盤面クリア＆生成
+  bgBoardEl.innerHTML = '';
+  bgBoardState = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => ({ owner: 0, isPhantom: false, promisedOwner: 0, trapOwner: 0 }))
+  );
+  bgCurrentPlayer = 1;
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      bgBoardEl.appendChild(cell);
+    }
+  }
+
+  // 自動対戦ループの開始（500ms周期）
+  if (bgDemoInterval) clearInterval(bgDemoInterval);
+  bgDemoInterval = setInterval(stepBgDemo, 500);
+}
+
+function renderBgBoard() {
+  const bgBoardEl = document.getElementById('bg-board');
+  if (!bgBoardEl) return;
+  const cells = bgBoardEl.children;
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const idx = r * BOARD_SIZE + c;
+      const cellData = bgBoardState[r][c];
+      const cell = cells[idx];
+      
+      cell.className = 'cell';
+      cell.textContent = '';
+      if (cellData.owner === 1) {
+        cell.textContent = '〇';
+        cell.classList.add('p1');
+      } else if (cellData.owner === 2) {
+        cell.textContent = '✕';
+        cell.classList.add('p2');
+      }
+    }
+  }
+}
+
+function stepBgDemo() {
+  // 候補手から高速に最善手を取得（背景用なので深さ1〜2相当の高速計算）
+  const candidates = getTopCandidateMoves(bgBoardState, bgCurrentPlayer, 5);
+  if (candidates.length === 0 || checkWinBoard(bgBoardState, 1) || checkWinBoard(bgBoardState, 2)) {
+    // どちらかが勝ったか置けなくなったら再スタート
+    initBgDemo();
+    return;
+  }
+
+  // 候補の中から少しランダム性を持たせて手を打つ
+  const move = candidates[Math.floor(Math.random() * Math.min(2, candidates.length))];
+  bgBoardState[move.r][move.c].owner = bgCurrentPlayer;
+
+  renderBgBoard();
+
+  if (checkWinBoard(bgBoardState, bgCurrentPlayer)) {
+    setTimeout(initBgDemo, 1500); // 決着後1.5秒待ってリセット
+  } else {
+    bgCurrentPlayer = bgCurrentPlayer === 1 ? 2 : 1;
+  }
+}
+
+function stopBgDemo() {
+  if (bgDemoInterval) {
+    clearInterval(bgDemoInterval);
+    bgDemoInterval = null;
+  }
+}
+
+// 画面遷移との連動
+function showTitleScreen() {
+  elements.modalResult.classList.add('hidden');
+  elements.screenGame.classList.remove('active');
+  elements.screenTitle.classList.add('active');
+  initBgDemo(); // タイトルに戻ったらデモ再生開始
+}
+
+const originalStartGame = startGame;
+startGame = function() {
+  stopBgDemo(); // ゲーム開始時に背景デモを停止
+  originalStartGame();
+};
+
+// 起動時に背景デモを開始
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+  initBgDemo();
+});
 function init() {
   elements.btnPvp.addEventListener('click', () => setMode('pvp'));
   elements.btnPve.addEventListener('click', () => setMode('pve'));
