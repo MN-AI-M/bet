@@ -496,33 +496,58 @@ body {
 
 
 
+
+
+/* スキルリストの横スクロールとドラッグの競合を防ぐ */
 #skills-list {
   display: flex;
-  gap: 12px;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  cursor: grab;
-  user-select: none;
-  /* スクロールバーを滑らかにする設定 */
-  scrollbar-width: thin;
+  gap: 12px;
+  padding: 10px;
+  touch-action: pan-x; /* 横スクロールのみブラウザに許可 */
 }
 
-#skills-list:active {
+/* 子要素のイベント無効化による誤作動を防ぐため修正 */
+#skills-list * {
+  user-select: none;
+}
+
+/* スキルカードのスタイル */
+.skill-card-item {
+  flex: 0 0 auto;
+  width: 90px;
+  height: 130px;
+  background: #2a2a2a;
+  border: 2px solid #444;
+  border-radius: 8px;
+  cursor: grab;
+  touch-action: none; /* ドラッグ操作をJSで完全制御するため */
+  transition: transform 0.1s ease;
+}
+
+.skill-card-item:active {
   cursor: grabbing;
 }
 
-/* 子要素がドラッグの邪魔をしないようにする */
-#skills-list * {
-  user-select: none;
-  pointer-events: none; /* カード内部のクリック判定を無効化せず親に伝えるため調整 */
+/* ドラッグ中に指やマウスに追従するカードの見た目（クローン） */
+.skill-card-dragging {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.85;
+  transform: scale(1.05);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
 }
 
-/* カードの中身だけクリックを有効化する */
-.skill-card-item {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-  pointer-events: auto; 
+/* 盤面（ドロップターゲット）のスタイル例 */
+.board-cell {
+  /* 盤面セルのスタイル */
+  transition: background-color 0.2s;
+}
+
+.board-cell.drag-over {
+  background-color: rgba(255, 215, 0, 0.3); /* ドロップ可能なときのハイライト */
+  border-color: #ffd700;
 }
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--text-main); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
