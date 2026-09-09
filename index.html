@@ -2,83 +2,64 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>9x9 SKILL TAC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スキル五目並べ</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- 背景デモ対戦 -->
+  <div id="bg-board-container">
+    <div id="bg-board"></div>
+  </div>
+
   <!-- タイトル画面 -->
   <div id="screen-title" class="screen active">
-    <div class="bg-board-container">
-      <div id="bg-board" class="board"></div>
+    <h1>スキル五目並べ</h1>
+    <div class="mode-select">
+      <button id="btn-pvp" class="btn active">2人プレイ (PvP)</button>
+      <button id="btn-pve" class="btn">VS Bot (PvE)</button>
     </div>
-
-    <div class="title-content">
-      <div class="mode-select">
-        <button id="btn-pvp" class="mode-btn active" data-mode="pvp">2 PLAYER</button>
-        <button id="btn-pve" class="mode-btn" data-mode="pve">VS BOT</button>
-      </div>
-      <button id="btn-start" class="start-btn">START</button>
-    </div>
+    <button id="btn-start" class="btn btn-primary">ゲーム開始</button>
   </div>
 
-  <!-- ゲーム画面 -->
+  <!-- メインゲーム画面 -->
   <div id="screen-game" class="screen">
-    <header class="game-header">
-      <div class="player-info player-1 active" id="p1-info">
-        <span class="p-symbol">〇</span><span class="p-name">Player 1</span>
+    <div class="game-header">
+      <div id="p1-info" class="player-card">
+        <span class="player-name">Player 1</span> (〇)
       </div>
-      <div class="game-status">
+      <div class="status-info">
         <div id="status-turn">Player 1 の番</div>
-        <div id="status-phase" class="phase-badge">1. 石を置いてください</div>
+        <div id="status-phase">スキルを使うか、マスを選んで石を置いてください</div>
       </div>
-      <div class="player-info player-2" id="p2-info">
-        <span class="p-symbol">✕</span><span class="p-name">Player 2</span>
+      <div id="p2-info" class="player-card">
+        <span class="player-name">Player 2</span> (✕)
       </div>
-    </header>
+    </div>
 
-    <main class="game-main">
-      <div class="board-container">
-        <div id="board" class="board"></div>
-        <div id="fog-overlay" class="fog-overlay hidden"></div>
-      </div>
-    </main>
-  </div>
+    <!-- 盤面エリア -->
+    <div class="board-wrapper">
+      <div id="board"></div>
+      <div id="fog-overlay" class="hidden"></div>
+    </div>
 
-  <!-- 【新UI】中央ポップアップ：獲得カード通知モーダル -->
-  <div id="modal-get-card" class="modal-overlay hidden">
-    <div id="get-card-content" class="get-card-card">
-      <div class="card-badge">NEW SKILL</div>
-      <div id="get-card-title" class="card-title-lg">スキル名</div>
-      <div id="get-card-desc" class="card-desc-lg">効果の説明文がここに入ります</div>
-      <div class="swipe-hint">スワイプして閉じる</div>
+    <!-- ボード下のスキルカード所持エリア -->
+    <div class="hand-container">
+      <div class="hand-label">手札（ドラッグして使用）</div>
+      <div id="skills-list" class="skills-list"></div>
     </div>
   </div>
-
-  <!-- 【新UI】中央ポップアップ：スキル発動・一覧モーダル -->
-  <div id="modal-skills" class="modal-overlay hidden">
-    <div class="skills-container">
-      <div class="skills-header">
-        <h3>使用するスキルを盤面にドラッグ</h3>
-        <p>枠外をタップで「スキル不使用（ターン終了）」</p>
-      </div>
-      <div id="skills-list" class="skills-list">
-        <!-- JSで所持カードがここに生成される -->
-      </div>
-      <button id="btn-skip-skill" class="action-btn secondary">スキルを使用しない</button>
-    </div>
-  </div>
-
-  <!-- ドラッグ中に追従するクローン要素 -->
-  <div id="drag-proxy" class="drag-proxy hidden"></div>
 
   <!-- リザルトモーダル -->
   <div id="modal-result" class="modal hidden">
     <div class="modal-content">
       <h2 id="result-title">GAME OVER</h2>
-      <p id="result-message">Player 1 の勝利です！</p>
-      <button id="btn-restart" class="action-btn primary">もう一度遊ぶ</button>
-      <button id="btn-to-title" class="action-btn secondary">タイトルへ戻る</button>
+      <p id="result-message"></p>
+      <div class="modal-buttons">
+        <button id="btn-restart" class="btn btn-primary">もう一度</button>
+        <button id="btn-to-title" class="btn">タイトルへ</button>
+      </div>
     </div>
   </div>
 
