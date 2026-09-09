@@ -1,6 +1,6 @@
 const BOARD_SIZE = 9;
 const WIN_COUNT = 5;
-const MAX_HAND_SIZE = 3; // 手札の上限枚数
+const MAX_HAND_SIZE = 3;
 
 const SKILLS = [
   { id: 1, name: "ハズレ", desc: "何も起きない" },
@@ -20,15 +20,15 @@ const SKILLS = [
 const state = {
   mode: 'pvp',
   currentPlayer: 1,
-  phase: 'PLACE',
+  phase: 'MAIN', // スキル使用＆石配置フェーズ
   board: [],
   hands: { 1: [], 2: [] }, 
-  drawnCard: null,         
   targetCallback: null,
   fogForPlayer: null,
   fogArea: null,
   overrideNextCard: {},
-  phantomStones: []
+  phantomStones: [],
+  extraTurn: false
 };
 
 const elements = {
@@ -46,12 +46,24 @@ const elements = {
   modalResult: document.getElementById('modal-result'),
   resultTitle: document.getElementById('result-title'),
   resultMessage: document.getElementById('result-message'),
-  modalGetCard: document.getElementById('modal-get-card'),
-  getCardTitle: document.getElementById('get-card-title'),
-  getCardDesc: document.getElementById('get-card-desc'),
-  modalSkills: document.getElementById('modal-skills'),
   skillsList: document.getElementById('skills-list')
 };
+
+/* =======================================
+   デザイン強制初期化（ホワイトテーマ）
+======================================= */
+function applyWhiteTheme() {
+  document.body.style.backgroundColor = '#ffffff';
+  document.body.style.color = '#000000';
+  document.body.style.fontFamily = 'sans-serif';
+  
+  // 既存の不要なモーダルを強制非表示
+  const modals = ['modal-get-card', 'modal-skills'];
+  modals.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
 
 /* =======================================
    背景デモ対戦 (Bot vs Bot) ロジック
@@ -74,8 +86,8 @@ function initBgDemo() {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
-      cell.dataset.r = r;
-      cell.dataset.c = c;
+      cell.style.border = '1px solid #000';
+      cell.style.backgroundColor = '#fff';
       bgBoardEl.appendChild(cell);
     }
   }
@@ -95,14 +107,13 @@ function renderBgBoard() {
       const cellData = bgBoardState[r][c];
       const cell = cells[idx];
       
-      cell.className = 'cell';
       cell.textContent = '';
       if (cellData.owner === 1) {
         cell.textContent = '〇';
-        cell.classList.add('p1');
+        cell.style.color = '#000';
       } else if (cellData.owner === 2) {
         cell.textContent = '✕';
-        cell.classList.add('p2');
+        cell.style.color = '#000';
       }
     }
   }
@@ -117,7 +128,6 @@ function stepBgDemo() {
 
   const move = candidates[Math.floor(Math.random() * Math.min(2, candidates.length))];
   bgBoardState[move.r][move.c].owner = bgCurrentPlayer;
-
   renderBgBoard();
 
   if (checkWinBoard(bgBoardState, bgCurrentPlayer)) {
@@ -137,11 +147,10 @@ function stopBgDemo() {
 /* =======================================
    メインゲーム ロジック
 ======================================= */
-
 window.addEventListener('DOMContentLoaded', () => {
+  applyWhiteTheme();
   init();
   initBgDemo();
-  initDraggableScroll();
 });
 
 function init() {
@@ -150,160 +159,6 @@ function init() {
   elements.btnStart.addEventListener('click', startGame);
   document.getElementById('btn-restart').addEventListener('click', startGame);
   document.getElementById('btn-to-title').addEventListener('click', showTitleScreen);
-
-  elements.modalGetCard.addEventListener('click', () => {
-    elements.modalGetCard.classList.add('hidden');
-    openSkillModal();
-  });
-
-  // 5. モーダルの枠外タップでスキルを使用せずに進める
-  if (elements.modalSkills) {
-    elements.modalSkills.addEventListener('click', (e) => {
-      if (e.target === elements.modalSkills) {
-        closeSkillModalSmooth(() => {
-          endTurn();
-        });
-      }
-    });
-  }
-}
-
-function setupSkillDragAndDrop(cardEl, card, index) {
-  let cursorEl = null;
-  let startX = 0;
-  let startY = 0;
-
-  cardEl.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-
-    startX = e.clientX;
-    startY = e.clientY;
-    cardEl.setPointerCapture(e.pointerId);
-
-    const onPointerMove = (moveEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-
-      if (!cursorEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        cursorEl = document.createElement('div');
-        cursorEl.className = 'skill-drag-cursor';
-        document.body.appendChild(cursorEl);
-        
-        cardEl.style.opacity = '0.4';
-
-        if (elements.modalSkills) {
-          elements.modalSkills.classList.remove('show');
-          elements.modalSkills.classList.add('hidden');
-        }
-      }
-
-      if (cursorEl) {
-        cursorEl.style.left = `${moveEvent.clientX}px`;
-        cursorEl.style.top = `${moveEvent.clientY}px`;
-
-        cursorEl.style.visibility = 'hidden';
-        const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-        cursorEl.style.visibility = 'visible';
-
-        const boardCell = targetElement ? targetElement.closest('.cell') : null;
-
-        document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
-        
-        if (boardCell) {
-          boardCell.classList.add('drag-over');
-        }
-      }
-    };
-
-    const onPointerUp = (upEvent) => {
-      cardEl.removeEventListener('pointermove', onPointerMove);
-      cardEl.removeEventListener('pointerup', onPointerUp);
-
-      cardEl.style.opacity = '1';
-      document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
-
-      if (cursorEl) {
-        cursorEl.style.visibility = 'hidden';
-        const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
-        
-        cursorEl.remove();
-        cursorEl = null;
-
-        const boardCell = targetElement ? targetElement.closest('.cell') : null;
-
-        if (boardCell) {
-          // 3. 離したマスをそのまま適用対象として実行
-          const modal = document.getElementById('skill-modal');
-          if (modal) modal.style.display = 'none';
-
-          state.hands[state.currentPlayer].splice(index, 1);
-          executeSkill(card.id, boardCell);
-          renderGame();
-        } else {
-          if (elements.modalSkills) {
-            elements.modalSkills.classList.remove('hidden');
-            requestAnimationFrame(() => {
-              elements.modalSkills.classList.add('show');
-            });
-          }
-        }
-      }
-    };
-
-    cardEl.addEventListener('pointermove', onPointerMove);
-    cardEl.addEventListener('pointerup', onPointerUp);
-  });
-}
-
-function initDraggableScroll() {
-  const slider = elements.skillsList;
-  if (!slider) return;
-
-  let isDown = false;
-  let startX;
-  let scrollLeft;
-
-  slider.addEventListener('mousedown', (e) => {
-    isDown = true;
-    slider.classList.add('active');
-    startX = e.pageX - slider.offsetLeft;
-    scrollLeft = slider.scrollLeft;
-  });
-
-  slider.addEventListener('mouseleave', () => {
-    isDown = false;
-    slider.classList.remove('active');
-  });
-
-  slider.addEventListener('mouseup', () => {
-    isDown = false;
-    slider.classList.remove('active');
-  });
-
-  slider.addEventListener('mousemove', (e) => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - slider.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    slider.scrollLeft = scrollLeft - walk;
-  });
-
-  slider.addEventListener('touchstart', (e) => {
-    isDown = true;
-    startX = e.touches[0].pageX - slider.offsetLeft;
-    scrollLeft = slider.scrollLeft;
-  }, { passive: true });
-
-  slider.addEventListener('touchend', () => {
-    isDown = false;
-  });
-
-  slider.addEventListener('touchmove', (e) => {
-    if (!isDown) return;
-    const x = e.touches[0].pageX - slider.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    slider.scrollLeft = scrollLeft - walk;
-  }, { passive: true });
 }
 
 function setMode(mode) {
@@ -314,9 +169,6 @@ function setMode(mode) {
 
 function showTitleScreen() {
   elements.modalResult.classList.add('hidden');
-  elements.modalSkills.classList.remove('show');
-  elements.modalSkills.classList.add('hidden');
-  elements.modalGetCard.classList.add('hidden');
   elements.screenGame.classList.remove('active');
   elements.screenTitle.classList.add('active');
   initBgDemo();
@@ -324,7 +176,6 @@ function showTitleScreen() {
 
 function startGame() {
   stopBgDemo();
-
   elements.screenTitle.classList.remove('active');
   elements.modalResult.classList.add('hidden');
   elements.screenGame.classList.add('active');
@@ -335,21 +186,54 @@ function startGame() {
     }))
   );
 
-  state.currentPlayer = 1;
-  state.phase = 'PLACE';
   state.hands = { 1: [], 2: [] };
-  state.drawnCard = null;
-  state.fogForPlayer = null;
-  state.fogArea = null;
   state.overrideNextCard = {};
   state.phantomStones = [];
+  state.extraTurn = false;
 
+  startTurn(1);
+}
+
+function startTurn(player) {
+  state.currentPlayer = player;
+  state.phase = 'MAIN';
+
+  drawCardSilent();
+  
   renderBoard();
+  renderHand();
   updateUI();
+
+  if (state.mode === 'pve' && state.currentPlayer === 2) {
+    botTurn();
+  }
+}
+
+function drawCardSilent() {
+  const currentHand = state.hands[state.currentPlayer];
+  if (currentHand.length >= MAX_HAND_SIZE) return;
+
+  let drawn = null;
+  if (state.overrideNextCard[state.currentPlayer]) {
+    const cardId = state.overrideNextCard[state.currentPlayer];
+    drawn = SKILLS.find(s => s.id === cardId);
+    delete state.overrideNextCard[state.currentPlayer];
+  } else {
+    drawn = SKILLS[Math.floor(Math.random() * SKILLS.length)];
+  }
+
+  // ハズレ(id:1)は保存しない
+  if (drawn.id !== 1) {
+    currentHand.push(drawn);
+  }
 }
 
 function renderBoard() {
   elements.board.innerHTML = '';
+  // ボード自体のスタイルも白黒に
+  elements.board.style.backgroundColor = '#fff';
+  elements.board.style.border = '2px solid #000';
+
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cellData = state.board[r][c];
@@ -358,17 +242,26 @@ function renderBoard() {
       cell.dataset.row = r;
       cell.dataset.col = c;
 
+      // セルも完全白黒デザイン
+      cell.style.border = '1px solid #000';
+      cell.style.backgroundColor = '#fff';
+      cell.style.display = 'flex';
+      cell.style.alignItems = 'center';
+      cell.style.justifyContent = 'center';
+      cell.style.fontSize = '24px';
+      cell.style.fontWeight = 'bold';
+
       if (cellData.owner === 1) {
         cell.textContent = '〇';
-        cell.classList.add('p1');
+        cell.style.color = '#000';
       } else if (cellData.owner === 2) {
         cell.textContent = '✕';
-        cell.classList.add('p2');
+        cell.style.color = '#000';
       }
 
-      if (cellData.isPhantom) cell.classList.add('phantom');
-      if (cellData.promisedOwner) cell.classList.add('promised');
-      if (cellData.trapOwner === state.currentPlayer) cell.classList.add('trap-visible');
+      if (cellData.isPhantom) cell.style.opacity = '0.5';
+      if (cellData.promisedOwner) cell.style.boxShadow = 'inset 0 0 5px #000';
+      if (cellData.trapOwner === state.currentPlayer) cell.textContent += '!?';
 
       cell.addEventListener('click', () => handleCellClick(r, c));
       elements.board.appendChild(cell);
@@ -385,37 +278,146 @@ function updateFogOverlay() {
     elements.fogOverlay.style.left = `${c * cellSize + 20}px`;
     elements.fogOverlay.style.width = `${size * cellSize - 4}px`;
     elements.fogOverlay.style.height = `${size * cellSize - 4}px`;
+    elements.fogOverlay.style.backgroundColor = '#000'; // 黒ベタ塗り
     elements.fogOverlay.classList.remove('hidden');
   } else {
     elements.fogOverlay.classList.add('hidden');
   }
 }
 
+// 盤面の下に手札を展開する
+function renderHand() {
+  const listEl = elements.skillsList;
+  if (!listEl) return;
+  
+  listEl.innerHTML = '';
+  listEl.style.display = 'flex';
+  listEl.style.justifyContent = 'center';
+  listEl.style.flexWrap = 'wrap';
+  listEl.style.gap = '10px';
+  listEl.style.marginTop = '20px';
+
+  const currentHand = state.hands[state.currentPlayer];
+  if (!currentHand || state.mode === 'pve' && state.currentPlayer === 2) return; // Botの手札は隠す
+
+  currentHand.forEach((card, index) => {
+    const cardEl = document.createElement('div');
+    // 白黒カードデザイン
+    cardEl.style.border = '2px solid #000';
+    cardEl.style.backgroundColor = '#fff';
+    cardEl.style.color = '#000';
+    cardEl.style.padding = '8px 12px';
+    cardEl.style.cursor = 'grab';
+    cardEl.style.userSelect = 'none';
+    cardEl.style.textAlign = 'center';
+    cardEl.style.minWidth = '100px';
+
+    cardEl.innerHTML = `
+      <div style="font-weight:bold; font-size:14px; margin-bottom:4px; border-bottom:1px solid #000;">${card.name}</div>
+      <div style="font-size:11px;">${card.desc}</div>
+    `;
+
+    setupSkillDragAndDrop(cardEl, card, index);
+    listEl.appendChild(cardEl);
+  });
+}
+
+function setupSkillDragAndDrop(cardEl, card, index) {
+  let cursorEl = null;
+  let startX = 0;
+  let startY = 0;
+
+  cardEl.addEventListener('pointerdown', (e) => {
+    if (state.phase !== 'MAIN') return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    startX = e.clientX;
+    startY = e.clientY;
+    cardEl.setPointerCapture(e.pointerId);
+
+    const onPointerMove = (moveEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+
+      if (!cursorEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        cursorEl = document.createElement('div');
+        cursorEl.style.position = 'fixed';
+        cursorEl.style.pointerEvents = 'none';
+        cursorEl.style.zIndex = '9999';
+        cursorEl.style.border = '2px dashed #000';
+        cursorEl.style.backgroundColor = '#fff';
+        cursorEl.style.color = '#000';
+        cursorEl.style.padding = '5px 10px';
+        cursorEl.style.fontWeight = 'bold';
+        cursorEl.style.transform = 'translate(-50%, -50%)';
+        cursorEl.textContent = card.name;
+        document.body.appendChild(cursorEl);
+        
+        // 消える（透明化）処理は削除
+      }
+
+      if (cursorEl) {
+        cursorEl.style.left = `${moveEvent.clientX}px`;
+        cursorEl.style.top = `${moveEvent.clientY}px`;
+
+        cursorEl.style.visibility = 'hidden';
+        const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        cursorEl.style.visibility = 'visible';
+
+        const boardCell = targetElement ? targetElement.closest('.cell') : null;
+        document.querySelectorAll('.cell').forEach(cell => cell.style.backgroundColor = '#fff');
+        
+        if (boardCell) {
+          boardCell.style.backgroundColor = '#e0e0e0'; // 対象ハイライト（薄いグレー）
+        }
+      }
+    };
+
+    const onPointerUp = (upEvent) => {
+      cardEl.removeEventListener('pointermove', onPointerMove);
+      cardEl.removeEventListener('pointerup', onPointerUp);
+
+      document.querySelectorAll('.cell').forEach(cell => cell.style.backgroundColor = '#fff');
+
+      if (cursorEl) {
+        cursorEl.style.visibility = 'hidden';
+        const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
+        cursorEl.remove();
+        cursorEl = null;
+
+        const boardCell = targetElement ? targetElement.closest('.cell') : null;
+
+        if (boardCell) {
+          state.hands[state.currentPlayer].splice(index, 1);
+          executeSkill(card.id, boardCell);
+        }
+      }
+    };
+
+    cardEl.addEventListener('pointermove', onPointerMove);
+    cardEl.addEventListener('pointerup', onPointerUp);
+  });
+}
+
 function updateUI() {
-  // 4. Bot vs Playerの時のプレイヤー名表示切り替え
   const p1Name = "Player 1";
   const p2Name = state.mode === 'pve' ? "Bot" : "Player 2";
-
   const currentName = state.currentPlayer === 1 ? p1Name : p2Name;
+  
   elements.statusTurn.textContent = `${currentName} の番`;
 
   if (elements.p1Info) elements.p1Info.querySelector('.player-name')?.replaceChildren(p1Name);
   if (elements.p2Info) elements.p2Info.querySelector('.player-name')?.replaceChildren(p2Name);
 
-  elements.p1Info.classList.toggle('active', state.currentPlayer === 1);
-  elements.p2Info.classList.toggle('active', state.currentPlayer === 2);
-
-  if (state.phase === 'PLACE') {
-    elements.statusPhase.textContent = '1. マスを選んで石を置いてください';
-  } else if (state.phase === 'ACTION') {
-    elements.statusPhase.textContent = '2. スキルを使用・確認してください';
+  if (state.phase === 'MAIN') {
+    elements.statusPhase.textContent = '石を配置してください（スキル使用可）';
   } else if (state.phase === 'TARGET_SELECT') {
     elements.statusPhase.textContent = '対象のマスを選択してください';
   }
 }
 
 function handleCellClick(r, c) {
-  if (state.phase === 'PLACE') {
+  if (state.phase === 'MAIN') {
     placeStone(r, c);
   } else if (state.phase === 'TARGET_SELECT' && state.targetCallback) {
     state.targetCallback(r, c);
@@ -438,115 +440,12 @@ function placeStone(r, c) {
 
   renderBoard();
 
-  const pName = (state.mode === 'pve' && state.currentPlayer === 2) ? "Bot" : `Player ${state.currentPlayer}`;
-  if (checkWin(state.currentPlayer)) {
-    endGame(`${pName} の勝利！`);
-    return;
-  }
-
-  // 2. 石を置いてからスキル獲得まで0.3秒遅延させる
-  setTimeout(() => {
-    actionPhase();
-  }, 300);
-}
-
-function actionPhase() {
-  state.phase = 'ACTION';
-  updateUI();
-
-  if (state.mode === 'pve' && state.currentPlayer === 2) {
-    setTimeout(() => botDecideAction(), 600);
-  } else {
-    handleDrawCard();
-  }
-}
-
-function handleDrawCard() {
-  const currentHand = state.hands[state.currentPlayer];
-
-  // 1. 手札が満杯（3枚）の場合はカードを獲得せずにそのままスキル画面へ
-  if (currentHand.length >= MAX_HAND_SIZE) {
-    openSkillModal();
-    return;
-  }
-
-  let drawn = null;
-  if (state.overrideNextCard[state.currentPlayer]) {
-    const cardId = state.overrideNextCard[state.currentPlayer];
-    drawn = SKILLS.find(s => s.id === cardId);
-    delete state.overrideNextCard[state.currentPlayer];
-  } else {
-    drawn = SKILLS[Math.floor(Math.random() * SKILLS.length)];
-  }
-
-  state.drawnCard = drawn;
-  currentHand.push(drawn);
-
-  elements.getCardTitle.textContent = drawn.name;
-  elements.getCardDesc.textContent = drawn.desc;
-  elements.modalGetCard.classList.remove('hidden');
-}
-
-function openSkillModal() {
-  const currentHand = state.hands[state.currentPlayer];
+  if (checkWinAfterAction()) return;
   
-  if (!currentHand || currentHand.length === 0) {
-    endTurn();
-    return;
-  }
-
-  elements.modalGetCard.classList.add('hidden');
-  elements.skillsList.innerHTML = '';
-
-  const modal = document.getElementById('skill-modal');
-  if (modal) {
-    modal.style.display = 'block';
-  }
-
-  currentHand.forEach((card, index) => {
-    const cardEl = document.createElement('div');
-    cardEl.className = 'skill-card-item';
-    cardEl.innerHTML = `
-      <div class="card-title">${card.name}</div>
-      <div class="card-desc">${card.desc}</div>
-    `;
-
-    setupSkillDragAndDrop(cardEl, card, index);
-    elements.skillsList.appendChild(cardEl);
-  });
-
-  elements.modalSkills.classList.remove('hidden');
-  requestAnimationFrame(() => {
-    elements.modalSkills.classList.add('show');
-  });
-}
-
-function closeSkillModalSmooth(callback) {
-  elements.modalSkills.classList.remove('show');
-  setTimeout(() => {
-    elements.modalSkills.classList.add('hidden');
-    const modal = document.getElementById('skill-modal');
-    if (modal) modal.style.display = 'none';
-    if (callback) callback();
-  }, 300);
-}
-
-function cancelTargetSelection() {
-  state.phase = 'ACTION';
-  state.targetCallback = null;
-  const cells = elements.board.querySelectorAll('.cell');
-  cells.forEach(cell => cell.classList.remove('target-selectable'));
-  updateUI();
-  openSkillModal();
+  endTurn();
 }
 
 function endTurn() {
-  elements.modalSkills.classList.remove('show');
-  elements.modalSkills.classList.add('hidden');
-  elements.modalGetCard.classList.add('hidden');
-  const modal = document.getElementById('skill-modal');
-  if (modal) modal.style.display = 'none';
-
   state.phantomStones = state.phantomStones.filter(p => {
     p.remainingTurns--;
     if (p.remainingTurns <= 0) {
@@ -564,89 +463,95 @@ function endTurn() {
     state.fogArea = null;
   }
 
-  state.currentPlayer = state.currentPlayer === 1 ? 2 : 1;
-  state.phase = 'PLACE';
-  state.drawnCard = null;
-
-  renderBoard();
-  updateUI();
-
-  if (state.mode === 'pve' && state.currentPlayer === 2) {
-    setTimeout(() => botPlaceStone(), 100);
+  let nextPlayer = state.currentPlayer === 1 ? 2 : 1;
+  if (state.extraTurn) {
+    nextPlayer = state.currentPlayer;
+    state.extraTurn = false;
   }
+
+  startTurn(nextPlayer);
 }
 
 /* =======================================
    スキル処理
 ======================================= */
+function checkWinAfterAction() {
+  if (checkWin(1)) {
+    endGame("Player 1 の勝利！");
+    return true;
+  }
+  if (checkWin(2)) {
+    const pName = state.mode === 'pve' ? "Bot" : "Player 2";
+    endGame(`${pName} の勝利！`);
+    return true;
+  }
+  return false;
+}
+
+function finishSkill() {
+  if (checkWinAfterAction()) return;
+  state.phase = 'MAIN';
+  renderBoard();
+  renderHand();
+  updateUI();
+}
+
 function executeSkill(skillId, targetCell = null) {
   const targetOpponent = state.currentPlayer === 1 ? 2 : 1;
-
-  // ドラッグ先が渡されている場合、そのセルの座標を取得
   const dropR = targetCell ? parseInt(targetCell.dataset.row, 10) : null;
   const dropC = targetCell ? parseInt(targetCell.dataset.col, 10) : null;
 
   switch (skillId) {
-    case 1: // ハズレ
-      endTurn();
+    case 1: 
+      finishSkill(); 
       break;
 
-    case 2: // 一手消去
+    case 2:
       if (dropR !== null && state.board[dropR][dropC].owner === targetOpponent) {
         state.board[dropR][dropC].owner = 0;
-        renderBoard();
-        endTurn();
+        finishSkill();
       } else {
         startTargetSelection('相手の石を選んでください', (r, c) => {
           if (state.board[r][c].owner === targetOpponent) {
             state.board[r][c].owner = 0;
-            renderBoard();
-            endTurn();
+            finishSkill();
           }
         }, c => c.owner === targetOpponent);
       }
       break;
 
-    case 3: // 視界潰し
+    case 3:
       const tr = Math.floor(Math.random() * (BOARD_SIZE - 2));
       const tc = Math.floor(Math.random() * (BOARD_SIZE - 2));
       state.fogForPlayer = targetOpponent;
       state.fogArea = { r: tr, c: tc, size: 3 };
-      endTurn();
+      finishSkill();
       break;
 
-    case 4: // 一列消去
+    case 4:
       const applyRowColErase = (r, c) => {
         const isRow = Math.random() < 0.5;
         for (let i = 0; i < BOARD_SIZE; i++) {
           if (isRow && state.board[r][i].owner === targetOpponent) state.board[r][i].owner = 0;
           if (!isRow && state.board[i][c].owner === targetOpponent) state.board[i][c].owner = 0;
         }
-        renderBoard();
-        endTurn();
+        finishSkill();
       };
-
       if (dropR !== null && state.board[dropR][dropC].owner === targetOpponent) {
         applyRowColErase(dropR, dropC);
       } else {
         startTargetSelection('相手の石を選んでください', (r, c) => {
-          if (state.board[r][c].owner === targetOpponent) {
-            applyRowColErase(r, c);
-          }
+          if (state.board[r][c].owner === targetOpponent) applyRowColErase(r, c);
         }, c => c.owner === targetOpponent);
       }
       break;
 
-    case 5: // 追加ターン
-      state.phase = 'PLACE';
-      renderBoard(); 
-      updateUI();
-      if (state.mode === 'pve' && state.currentPlayer === 2) {
-        setTimeout(() => botPlaceStone(), 100);
-      }
+    case 5:
+      state.extraTurn = true;
+      finishSkill();
       break;
 
-    case 6: // 強制リセット
+    case 6:
       if (Math.random() < 0.05) {
         let removed = 0;
         for (let i = 0; i < 100 && removed < 2; i++) {
@@ -658,46 +563,36 @@ function executeSkill(skillId, targetCell = null) {
           }
         }
       }
-      renderBoard();
-      endTurn();
+      finishSkill();
       break;
 
-    case 7: // 浸食
+    case 7:
       const applyErosion = (r, c) => {
         state.board[r][c].owner = state.currentPlayer;
         state.board[r][c].isPhantom = false;
-        renderBoard();
-        const pName = (state.mode === 'pve' && state.currentPlayer === 2) ? "Bot" : `Player ${state.currentPlayer}`;
-        if (checkWin(state.currentPlayer)) endGame(`${pName} の勝利！`);
-        else endTurn();
+        finishSkill();
       };
-
-      if (dropR !== null) {
-        applyErosion(dropR, dropC);
-      } else {
-        startTargetSelection('マスを選んでください', (r, c) => {
-          applyErosion(r, c);
-        });
+      if (dropR !== null) applyErosion(dropR, dropC);
+      else {
+        startTargetSelection('マスを選んでください', (r, c) => applyErosion(r, c));
       }
       break;
 
-    case 8: // 確約
+    case 8:
       if (dropR !== null && state.board[dropR][dropC].owner === 0) {
         state.board[dropR][dropC].promisedOwner = state.currentPlayer;
-        renderBoard();
-        endTurn();
+        finishSkill();
       } else {
         startTargetSelection('マスを選んでください', (r, c) => {
           if (state.board[r][c].owner === 0) {
             state.board[r][c].promisedOwner = state.currentPlayer;
-            renderBoard();
-            endTurn();
+            finishSkill();
           }
         }, c => c.owner === 0);
       }
       break;
 
-    case 9: // 爆弾(5%)
+    case 9:
       const applyBomb = (r, c) => {
         if (Math.random() < 0.05) {
           for (let dr = -1; dr <= 1; dr++) {
@@ -709,20 +604,15 @@ function executeSkill(skillId, targetCell = null) {
             }
           }
         }
-        renderBoard();
-        endTurn();
+        finishSkill();
       };
-
-      if (dropR !== null) {
-        applyBomb(dropR, dropC);
-      } else {
-        startTargetSelection('爆弾の中心マスを選んでください', (r, c) => {
-          applyBomb(r, c);
-        });
+      if (dropR !== null) applyBomb(dropR, dropC);
+      else {
+        startTargetSelection('爆弾の中心マスを選んでください', (r, c) => applyBomb(r, c));
       }
       break;
 
-    case 10: // 幻影
+    case 10:
       let phantoms = 0;
       for (let i = 0; i < 50 && phantoms < 3; i++) {
         let rr = Math.floor(Math.random() * BOARD_SIZE);
@@ -734,26 +624,23 @@ function executeSkill(skillId, targetCell = null) {
           phantoms++;
         }
       }
-      renderBoard();
-      endTurn();
+      finishSkill();
       break;
 
-    case 11: // すり替え
+    case 11:
       state.overrideNextCard[targetOpponent] = 1;
-      endTurn();
+      finishSkill();
       break;
 
-    case 12: // 罠
+    case 12:
       if (dropR !== null && state.board[dropR][dropC].owner === 0) {
         state.board[dropR][dropC].trapOwner = state.currentPlayer;
-        renderBoard();
-        endTurn();
+        finishSkill();
       } else {
         startTargetSelection('罠を仕掛けるマスを選んでください', (r, c) => {
           if (state.board[r][c].owner === 0) {
             state.board[r][c].trapOwner = state.currentPlayer;
-            renderBoard();
-            endTurn();
+            finishSkill();
           }
         }, c => c.owner === 0);
       }
@@ -771,10 +658,16 @@ function startTargetSelection(promptText, callback, filterFn = null) {
     const r = parseInt(cell.dataset.row);
     const c = parseInt(cell.dataset.col);
     if (!filterFn || filterFn(state.board[r][c])) {
-      cell.classList.add('target-selectable');
+      cell.style.backgroundColor = '#f0f0f0'; // 選択可能なマスを微かに強調
     }
   });
   updateUI();
+}
+
+function cancelTargetSelection() {
+  state.phase = 'MAIN';
+  state.targetCallback = null;
+  finishSkill();
 }
 
 function checkWin(player) {
@@ -804,15 +697,68 @@ function checkWinBoard(board, player) {
 
 function endGame(msg) {
   elements.resultTitle.textContent = "GAME OVER";
+  elements.resultTitle.style.color = "#000";
   elements.resultMessage.textContent = msg;
+  elements.resultMessage.style.color = "#000";
+  elements.modalResult.style.backgroundColor = "rgba(255,255,255,0.95)";
+  elements.modalResult.style.border = "2px solid #000";
   elements.modalResult.classList.remove('hidden');
+  elements.modalResult.style.display = "flex";
 }
 
 /* =======================================
    AI (Bot) ロジック
 ======================================= */
+function botTurn() {
+  setTimeout(() => {
+    const hand = state.hands[2];
+    let useIndex = -1;
+
+    for (let i = 0; i < hand.length; i++) {
+      if (hand[i].id === 5) { useIndex = i; break; }
+      if (Math.random() < 0.3 && [2, 4, 7, 8, 12].includes(hand[i].id)) {
+        useIndex = i; break;
+      }
+    }
+    if (useIndex === -1 && hand.length >= 3) {
+      useIndex = Math.floor(Math.random() * hand.length);
+    }
+
+    if (useIndex !== -1) {
+      const card = hand[useIndex];
+      state.hands[2].splice(useIndex, 1);
+      
+      const needsTarget = [2, 4, 7, 8, 9, 12].includes(card.id);
+      if (needsTarget) {
+        executeSkill(card.id); 
+        setTimeout(() => {
+          const cells = [];
+          for(let r=0; r<BOARD_SIZE; r++){
+            for(let c=0; c<BOARD_SIZE; c++){
+              // 簡易的に選択可能なものを抽出
+              if(state.board[r][c].owner !== 2) cells.push({r,c}); 
+            }
+          }
+          if (cells.length > 0) {
+            const target = cells[Math.floor(Math.random() * cells.length)];
+            if(state.targetCallback) state.targetCallback(target.r, target.c);
+          } else {
+            cancelTargetSelection();
+          }
+          setTimeout(botPlaceStone, 600);
+        }, 400);
+      } else {
+        executeSkill(card.id);
+        setTimeout(botPlaceStone, 600);
+      }
+    } else {
+      botPlaceStone();
+    }
+  }, 600);
+}
+
 function botPlaceStone() {
-  if (state.phase !== 'PLACE') return;
+  if (state.phase !== 'MAIN' && state.phase !== 'TARGET_SELECT') return;
   const move = getBotBestMoveTreeSearch();
   placeStone(move.r, move.c);
 }
@@ -952,7 +898,6 @@ function getBotBestMoveTreeSearch() {
   
   let bestScore = -Infinity;
   let bestMove = candidates[0] || { r: 4, c: 4 };
-
   const MAX_DEPTH = 7;
 
   for (let move of candidates) {
@@ -967,47 +912,4 @@ function getBotBestMoveTreeSearch() {
   }
 
   return bestMove;
-}
-
-function botDecideAction() {
-  if (state.phase !== 'ACTION') return;
-  const hand = state.hands[2];
-  let useIndex = -1;
-
-  for (let i = 0; i < hand.length; i++) {
-    if (hand[i].id === 5) { useIndex = i; break; }
-    if (Math.random() < 0.3 && [2, 4, 7, 8, 12].includes(hand[i].id)) {
-      useIndex = i; break;
-    }
-  }
-
-  if (useIndex === -1 && hand.length >= 3) {
-    useIndex = Math.floor(Math.random() * hand.length);
-  }
-
-  if (useIndex !== -1) {
-    const card = hand[useIndex];
-    state.hands[2].splice(useIndex, 1);
-    
-    setTimeout(() => {
-      const needsTarget = [2, 4, 7, 8, 9, 12].includes(card.id);
-      if (needsTarget) {
-        executeSkill(card.id); 
-        setTimeout(() => {
-            const cells = Array.from(elements.board.querySelectorAll('.target-selectable'));
-            if (cells.length > 0) {
-              const target = cells[Math.floor(Math.random() * cells.length)];
-              state.targetCallback(parseInt(target.dataset.row), parseInt(target.dataset.col));
-            } else {
-              cancelTargetSelection();
-              endTurn();
-            }
-        }, 300);
-      } else {
-        executeSkill(card.id);
-      }
-    }, 400);
-  } else {
-    endTurn();
-  }
 }
