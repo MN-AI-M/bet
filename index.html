@@ -2,64 +2,63 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>スキル五目並べ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>9x9 SKILL TAC</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <!-- 背景デモ対戦 -->
-  <div id="bg-board-container">
-    <div id="bg-board"></div>
-  </div>
-
   <!-- タイトル画面 -->
   <div id="screen-title" class="screen active">
-    <h1>スキル五目並べ</h1>
-    <div class="mode-select">
-      <button id="btn-pvp" class="btn active">2人プレイ (PvP)</button>
-      <button id="btn-pve" class="btn">VS Bot (PvE)</button>
+    <div class="bg-board-container">
+      <div id="bg-board" class="board"></div>
     </div>
-    <button id="btn-start" class="btn btn-primary">ゲーム開始</button>
+
+    <div class="title-content">
+      <div class="mode-select">
+        <button id="btn-pvp" class="mode-btn active" data-mode="pvp">2 PLAYER</button>
+        <button id="btn-pve" class="mode-btn" data-mode="pve">VS BOT</button>
+      </div>
+      <button id="btn-start" class="start-btn">START</button>
+    </div>
   </div>
 
-  <!-- メインゲーム画面 -->
+  <!-- ゲーム画面 -->
   <div id="screen-game" class="screen">
-    <div class="game-header">
-      <div id="p1-info" class="player-card">
-        <span class="player-name">Player 1</span> (〇)
+    <header class="game-header">
+      <div class="player-info player-1 active" id="p1-info">
+        <span class="p-symbol">〇</span><span class="p-name">Player 1</span>
       </div>
-      <div class="status-info">
+      <div class="game-status">
         <div id="status-turn">Player 1 の番</div>
-        <div id="status-phase">スキルを使うか、マスを選んで石を置いてください</div>
+        <div id="status-phase" class="phase-badge">スキルを使うか、マスを選んで石を置いてください</div>
       </div>
-      <div id="p2-info" class="player-card">
-        <span class="player-name">Player 2</span> (✕)
+      <div class="player-info player-2" id="p2-info">
+        <span class="p-symbol">✕</span><span class="p-name">Player 2</span>
       </div>
-    </div>
+    </header>
 
-    <!-- 盤面エリア -->
-    <div class="board-wrapper">
-      <div id="board"></div>
-      <div id="fog-overlay" class="hidden"></div>
-    </div>
+    <main class="game-main">
+      <div class="board-container">
+        <div id="board" class="board"></div>
+        <div id="fog-overlay" class="fog-overlay hidden"></div>
+      </div>
 
-    <!-- ボード下のスキルカード所持エリア -->
-    <div class="hand-container">
-      <div class="hand-label">手札（ドラッグして使用）</div>
-      <div id="skills-list" class="skills-list"></div>
-    </div>
+      <!-- ボードの下にカード置き場を配置 -->
+      <div class="hand-container">
+        <div id="skills-list" class="skills-list">
+          <!-- JSでここにカードが生成されます -->
+        </div>
+      </div>
+    </main>
   </div>
 
   <!-- リザルトモーダル -->
   <div id="modal-result" class="modal hidden">
     <div class="modal-content">
       <h2 id="result-title">GAME OVER</h2>
-      <p id="result-message"></p>
-      <div class="modal-buttons">
-        <button id="btn-restart" class="btn btn-primary">もう一度</button>
-        <button id="btn-to-title" class="btn">タイトルへ</button>
-      </div>
+      <p id="result-message">Player 1 の勝利です！</p>
+      <button id="btn-restart" class="action-btn primary">もう一度遊ぶ</button>
+      <button id="btn-to-title" class="action-btn secondary">タイトルへ戻る</button>
     </div>
   </div>
 
