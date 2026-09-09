@@ -2,25 +2,22 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>9x9 SKILL TAC</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- タイトル画面 -->
   <div id="screen-title" class="screen active">
-    <!-- 画面いっぱいに広がるBot vs Bot盤面 -->
     <div class="bg-board-container">
       <div id="bg-board" class="board"></div>
     </div>
 
-    <!-- タイトル文字なしの超シンプル UI -->
     <div class="title-content">
       <div class="mode-select">
         <button id="btn-pvp" class="mode-btn active" data-mode="pvp">2 PLAYER</button>
         <button id="btn-pve" class="mode-btn" data-mode="pve">VS BOT</button>
       </div>
-
       <button id="btn-start" class="start-btn">START</button>
     </div>
   </div>
@@ -46,23 +43,8 @@
         <div id="fog-overlay" class="fog-overlay hidden"></div>
       </div>
 
+      <!-- 右側はログ表示のみのスマートなサイドパネル -->
       <aside class="side-panel">
-        <div class="card-section">
-          <h3>手札・ストック (最大3枠)</h3>
-          <div id="hand-cards" class="hand-cards"></div>
-          
-          <div id="skill-actions" class="skill-actions hidden">
-            <div class="action-prompt">2. アクションを選択</div>
-            <button id="btn-draw-card" class="action-btn primary">カードを引いてターン終了</button>
-            <button id="btn-skip-action" class="action-btn secondary hidden">何もしない (ターン終了)</button>
-          </div>
-
-          <div id="target-prompt" class="target-prompt hidden">
-            <span>対象のマスを盤面からクリックしてください</span>
-            <button id="btn-cancel-target" class="action-btn cancel">キャンセル</button>
-          </div>
-        </div>
-
         <div class="log-section">
           <h3>対戦ログ</h3>
           <div id="game-log" class="game-log"></div>
@@ -70,6 +52,33 @@
       </aside>
     </main>
   </div>
+
+  <!-- 【新UI】中央ポップアップ：獲得カード通知モーダル -->
+  <div id="modal-get-card" class="modal-overlay hidden">
+    <div id="get-card-content" class="get-card-card">
+      <div class="card-badge">NEW SKILL</div>
+      <div id="get-card-title" class="card-title-lg">スキル名</div>
+      <div id="get-card-desc" class="card-desc-lg">効果の説明文がここに入ります</div>
+      <div class="swipe-hint">スワイプして閉じる</div>
+    </div>
+  </div>
+
+  <!-- 【新UI】中央ポップアップ：スキル発動・一覧モーダル -->
+  <div id="modal-skills" class="modal-overlay hidden">
+    <div class="skills-container">
+      <div class="skills-header">
+        <h3>使用するスキルを盤面にドラッグ</h3>
+        <p>枠外をタップで「スキル不使用（ターン終了）」</p>
+      </div>
+      <div id="skills-list" class="skills-list">
+        <!-- JSで所持カードがここに生成される -->
+      </div>
+      <button id="btn-skip-skill" class="action-btn secondary">スキルを使用しない</button>
+    </div>
+  </div>
+
+  <!-- ドラッグ中に追従するクローン要素 -->
+  <div id="drag-proxy" class="drag-proxy hidden"></div>
 
   <!-- リザルトモーダル -->
   <div id="modal-result" class="modal hidden">
