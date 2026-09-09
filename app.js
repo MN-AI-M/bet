@@ -99,14 +99,12 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
 
-      // 少し動かしたらドラッグ開始とみなす
       if (!cloneEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
         cloneEl = cardEl.cloneNode(true);
         cloneEl.classList.add('skill-card-dragging');
         document.body.appendChild(cloneEl);
         cardEl.style.opacity = '0.4';
 
-        // ドラッグ開始時にモーダルを隠す
         if (elements.modalSkills) {
           elements.modalSkills.classList.remove('show');
           elements.modalSkills.classList.add('hidden');
@@ -117,10 +115,12 @@ function setupSkillDragAndDrop(cardEl, card, index) {
         cloneEl.style.left = `${moveEvent.clientX - 45}px`;
         cloneEl.style.top = `${moveEvent.clientY - 65}px`;
 
-        // クローンを一時非表示にして下にある盤面セルをハイライト
         cloneEl.style.visibility = 'hidden';
         const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
         cloneEl.style.visibility = 'visible';
+
+        // デバッグ用：何に重なっているかコンソールに表示
+        console.log("Hovering over:", targetElement);
 
         const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
 
@@ -139,18 +139,19 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       document.querySelectorAll('.board-cell').forEach(cell => cell.classList.remove('drag-over'));
 
       if (cloneEl) {
-        // ★【修正ポイント】クローンを消す前に「指の下にある要素」を特定する
         cloneEl.style.visibility = 'hidden';
         const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
         
-        // クローンを削除
+        // デバッグ用：指を離した瞬間に何があるか表示
+        console.log("Dropped on:", targetElement);
+
         cloneEl.remove();
         cloneEl = null;
 
         const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
 
         if (boardCell) {
-          // 盤面にドロップ成功！
+          console.log("Success! Board cell found:", boardCell);
           const modal = document.getElementById('skill-modal');
           if (modal) modal.style.display = 'none';
 
@@ -158,7 +159,7 @@ function setupSkillDragAndDrop(cardEl, card, index) {
           executeSkill(card.id, boardCell);
           renderGame();
         } else {
-          // 盤面以外で離された場合：モーダルを元に戻す
+          console.log("Failed: .board-cell could not be found from targetElement.");
           if (elements.modalSkills) {
             elements.modalSkills.classList.remove('hidden');
             requestAnimationFrame(() => {
