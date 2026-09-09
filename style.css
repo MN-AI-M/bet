@@ -1,0 +1,357 @@
+:root {
+  --bg-color: #161920;
+  --panel-bg: #212631;
+  --card-bg: #2c3241;
+  --text-main: #f0f2f5;
+  --text-sub: #9ea8b6;
+  --border-color: #373e4f;
+
+  --p1-color: #ff5252;
+  --p2-color: #448aff;
+  --accent-color: #ffd700;
+
+  --board-grid-size: 9;
+  --cell-size: 52px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.screen {
+  display: none;
+  width: 100%;
+  max-width: 1100px;
+  padding: 20px;
+}
+
+.screen.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* タイトル画面 */
+.title-container {
+  background-color: var(--panel-bg);
+  padding: 40px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  width: 100%;
+  max-width: 440px;
+}
+
+.title-container h1 {
+  font-size: 2.2rem;
+  color: var(--accent-color);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--text-sub);
+  margin-bottom: 30px;
+  font-size: 0.95rem;
+}
+
+.mode-select h3 {
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  color: var(--text-sub);
+}
+
+.mode-btn {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 10px;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.mode-btn.active {
+  border-color: var(--accent-color);
+  background-color: rgba(255, 215, 0, 0.1);
+  font-weight: bold;
+}
+
+.start-btn {
+  width: 100%;
+  padding: 16px;
+  background-color: var(--accent-color);
+  color: #111;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+/* 対戦画面 */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 20px;
+  background-color: var(--panel-bg);
+  padding: 16px 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  opacity: 0.4;
+  transition: all 0.3s;
+}
+
+.player-info.active {
+  opacity: 1;
+  transform: scale(1.05);
+  background-color: var(--card-bg);
+}
+
+.player-1 .p-symbol { color: var(--p1-color); font-size: 1.5rem; font-weight: bold; }
+.player-2 .p-symbol { color: var(--p2-color); font-size: 1.5rem; font-weight: bold; }
+
+.game-status { text-align: center; }
+#status-turn { font-size: 1.1rem; font-weight: bold; margin-bottom: 4px; }
+.phase-badge {
+  font-size: 0.85rem;
+  background-color: var(--accent-color);
+  color: #111;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: bold;
+}
+
+.game-main {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.board-container {
+  position: relative;
+  background-color: var(--panel-bg);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--board-grid-size), var(--cell-size));
+  grid-template-rows: repeat(var(--board-grid-size), var(--cell-size));
+  gap: 4px;
+  background-color: var(--border-color);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.cell {
+  background-color: var(--bg-color);
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative;
+}
+
+.cell:hover { background-color: #272f3f; }
+.cell.p1 { color: var(--p1-color); }
+.cell.p2 { color: var(--p2-color); }
+.cell.phantom { opacity: 0.4; }
+.cell.promised::after {
+  content: "🔒";
+  font-size: 0.75rem;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+.cell.trap-visible::before {
+  content: "💣";
+  font-size: 0.75rem;
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+}
+.cell.target-selectable {
+  animation: pulse 0.8s infinite alternate;
+  border: 2px solid var(--accent-color);
+  cursor: crosshair;
+}
+
+@keyframes pulse {
+  0% { background-color: rgba(255, 215, 0, 0.1); }
+  100% { background-color: rgba(255, 215, 0, 0.4); }
+}
+
+/* 視界潰し */
+.fog-overlay {
+  position: absolute;
+  background-color: rgba(10, 10, 15, 0.96);
+  border: 2px dashed #ff5252;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff5252;
+  font-weight: bold;
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+.fog-overlay::after { content: "視界妨害エリア"; }
+
+.hidden { display: none !important; }
+
+/* サイドパネル */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 320px;
+}
+
+.card-section, .log-section {
+  background-color: var(--panel-bg);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.card-section h3, .log-section h3 {
+  font-size: 0.9rem;
+  color: var(--text-sub);
+  margin-bottom: 12px;
+}
+
+.card-display {
+  background-color: var(--card-bg);
+  border: 2px solid var(--accent-color);
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.card-display.empty {
+  border-color: var(--border-color);
+  color: var(--text-sub);
+}
+
+.card-inner .card-id {
+  display: inline-block;
+  background-color: var(--accent-color);
+  color: #111;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+
+.card-inner .card-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.card-inner .card-desc {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+
+.skill-actions { display: flex; flex-direction: column; gap: 8px; }
+
+.action-btn {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.action-btn.primary { background-color: var(--accent-color); color: #111; }
+.action-btn.secondary { background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); }
+.action-btn.cancel { background-color: #ff5252; color: white; margin-top: 8px; width: 100%; }
+
+.target-prompt { font-size: 0.85rem; color: var(--accent-color); text-align: center; }
+
+.game-log {
+  height: 180px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-entry {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background-color: rgba(0,0,0,0.2);
+}
+
+/* モーダル */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--panel-bg);
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  max-width: 380px;
+  width: 90%;
+}
+
+.modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--accent-color); }
+.modal-content p { margin-bottom: 24px; color: var(--text-sub); }
+.modal-content button { width: 100%; margin-bottom: 8px; }
