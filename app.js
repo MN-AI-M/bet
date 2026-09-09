@@ -2,18 +2,18 @@ const BOARD_SIZE = 9;
 const WIN_COUNT = 5;
 
 const SKILLS = [
-  { id: 1, name: "ハズレ", desc: "何もなし" },
-  { id: 2, name: "一手消去", desc: "相手石1個消去" },
-  { id: 3, name: "視界潰し", desc: "視界を妨害" },
-  { id: 4, name: "一列消去", desc: "一列を消去" },
-  { id: 5, name: "追加ターン", desc: "もう一回" },
-  { id: 6, name: "強制リセット", desc: "5%で2個消去" },
-  { id: 7, name: "浸食", desc: "指定マスを自色に" },
-  { id: 8, name: "確約", desc: "相手配置不可に" },
-  { id: 9, name: "爆弾", desc: "5%で3x3消去" },
-  { id: 10, name: "幻影", desc: "偽石3個(3T)" },
-  { id: 11, name: "すり替え", desc: "次ドローをハズレに" },
-  { id: 12, name: "罠", desc: "罠を設置" }
+  { id: 1, name: "ハズレ", desc: "何も起きない" },
+  { id: 2, name: "一手消去", desc: "相手の石1個消去" },
+  { id: 3, name: "視界潰し", desc: "相手の視界妨害" },
+  { id: 4, name: "一列消去", desc: "相手が並ぶ1列消去" },
+  { id: 5, name: "追加ターン", desc: "もう一度自分の番" },
+  { id: 6, name: "強制リセット", desc: "5%で相手石2個消去" },
+  { id: 7, name: "浸食", desc: "指定マスを自分の色に" },
+  { id: 8, name: "確約", desc: "指定マスに相手配置不可" },
+  { id: 9, name: "爆弾(5%)", desc: "3x3強制消去(5%)" },
+  { id: 10, name: "幻影", desc: "偽石を3個配置(3T)" },
+  { id: 11, name: "すり替え", desc: "相手の次カードをハズレに" },
+  { id: 12, name: "罠", desc: "見えない罠を設置" }
 ];
 
 const state = {
@@ -165,7 +165,8 @@ function setMode(mode) {
 
 function showTitleScreen() {
   elements.modalResult.classList.add('hidden');
-  elements.modalSkills.classList.remove('show');
+  elements.modalSkills.classList.remove('show'); // スライドダウンアニメーション用
+  elements.modalSkills.classList.add('hidden');
   elements.modalGetCard.classList.add('hidden');
   elements.screenGame.classList.remove('active');
   elements.screenTitle.classList.add('active');
@@ -220,13 +221,7 @@ function renderBoard() {
       if (cellData.promisedOwner) cell.classList.add('promised');
       if (cellData.trapOwner === state.currentPlayer) cell.classList.add('trap-visible');
 
-      // クリックおよびドラッグ/スワイプ代わりのタッチ操作対応
       cell.addEventListener('click', () => handleCellClick(r, c));
-      cell.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleCellClick(r, c);
-      }, { passive: false });
-
       elements.board.appendChild(cell);
     }
   }
@@ -248,16 +243,16 @@ function updateFogOverlay() {
 }
 
 function updateUI() {
-  elements.statusTurn.textContent = `P ${state.currentPlayer}`;
+  elements.statusTurn.textContent = `Player ${state.currentPlayer} の番`;
   elements.p1Info.classList.toggle('active', state.currentPlayer === 1);
   elements.p2Info.classList.toggle('active', state.currentPlayer === 2);
 
   if (state.phase === 'PLACE') {
-    elements.statusPhase.textContent = 'STONE PLACE';
+    elements.statusPhase.textContent = '1. マスを選んで石を置いてください';
   } else if (state.phase === 'ACTION') {
-    elements.statusPhase.textContent = 'SKILL SELECT';
+    elements.statusPhase.textContent = '2. スキルを使用・確認してください';
   } else if (state.phase === 'TARGET_SELECT') {
-    elements.statusPhase.textContent = 'SELECT TARGET';
+    elements.statusPhase.textContent = '対象のマスを選択してください';
   }
 }
 
@@ -286,7 +281,7 @@ function placeStone(r, c) {
   renderBoard();
 
   if (checkWin(state.currentPlayer)) {
-    endGame(`PLAYER ${state.currentPlayer} WINS`);
+    endGame(`Player ${state.currentPlayer} の勝利！`);
     return;
   }
 
@@ -337,13 +332,13 @@ function openSkillModal() {
   currentHand.forEach((card, index) => {
     const cardEl = document.createElement('div');
     cardEl.className = 'skill-card-item';
+    // テキスト情報を極力シンプルに制限
     cardEl.innerHTML = `
-      <div class="card-id">#${card.id}</div>
       <div class="card-title">${card.name}</div>
       <div class="card-desc">${card.desc}</div>
     `;
     cardEl.addEventListener('click', () => {
-      closeSkillModalWithAnim(() => {
+      closeSkillModalSmooth(() => {
         state.hands[state.currentPlayer].splice(index, 1);
         executeSkill(card.id);
       });
@@ -351,26 +346,40 @@ function openSkillModal() {
     elements.skillsList.appendChild(cardEl);
   });
 
-  // 下からスライドイン表示
-  elements.modalSkills.classList.add('show');
+  // 下からスライドアップして出現
+  elements.modalSkills.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    elements.modalSkills.classList.add('show');
+  });
 }
 
-function closeSkillModalWithAnim(callback) {
+function closeSkillModalSmooth(callback) {
   elements.modalSkills.classList.remove('show');
   setTimeout(() => {
+    elements.modalSkills.classList.add('hidden');
     if (callback) callback();
-  }, 300); // CSSのtransition時間と合わせる
+  }, 300); // CSS側のトランジション時間と合わせる
 }
 
 function handleSkipAction() {
-  closeSkillModalWithAnim(() => {
+  closeSkillModalSmooth(() => {
     elements.modalGetCard.classList.add('hidden');
     endTurn();
   });
 }
 
+function cancelTargetSelection() {
+  state.phase = 'ACTION';
+  state.targetCallback = null;
+  const cells = elements.board.querySelectorAll('.cell');
+  cells.forEach(cell => cell.classList.remove('target-selectable'));
+  updateUI();
+  openSkillModal();
+}
+
 function endTurn() {
-  closeSkillModalWithAnim();
+  elements.modalSkills.classList.remove('show');
+  elements.modalSkills.classList.add('hidden');
   elements.modalGetCard.classList.add('hidden');
 
   state.phantomStones = state.phantomStones.filter(p => {
@@ -413,7 +422,7 @@ function executeSkill(skillId) {
       endTurn();
       break;
     case 2:
-      startTargetSelection('SELECT ENEMY STONE', (r, c) => {
+      startTargetSelection('相手の石を選んでください', (r, c) => {
         if (state.board[r][c].owner === targetOpponent) {
           state.board[r][c].owner = 0;
           renderBoard();
@@ -429,7 +438,7 @@ function executeSkill(skillId) {
       endTurn();
       break;
     case 4:
-      startTargetSelection('SELECT LINE TARGET', (r, c) => {
+      startTargetSelection('相手の石を選んでください', (r, c) => {
         if (state.board[r][c].owner === targetOpponent) {
           const isRow = Math.random() < 0.5;
           for (let i = 0; i < BOARD_SIZE; i++) {
@@ -465,16 +474,16 @@ function executeSkill(skillId) {
       endTurn();
       break;
     case 7:
-      startTargetSelection('SELECT CELL', (r, c) => {
+      startTargetSelection('マスを選んでください', (r, c) => {
         state.board[r][c].owner = state.currentPlayer;
         state.board[r][c].isPhantom = false;
         renderBoard();
-        if (checkWin(state.currentPlayer)) endGame(`PLAYER ${state.currentPlayer} WINS`);
+        if (checkWin(state.currentPlayer)) endGame(`Player ${state.currentPlayer} の勝利！`);
         else endTurn();
       });
       break;
     case 8:
-      startTargetSelection('SELECT EMPTY CELL', (r, c) => {
+      startTargetSelection('マスを選んでください', (r, c) => {
         if (state.board[r][c].owner === 0) {
           state.board[r][c].promisedOwner = state.currentPlayer;
           renderBoard();
@@ -483,7 +492,7 @@ function executeSkill(skillId) {
       }, c => c.owner === 0);
       break;
     case 9:
-      startTargetSelection('SELECT BOMB CENTER', (r, c) => {
+      startTargetSelection('爆弾の中心マスを選んでください', (r, c) => {
         if (Math.random() < 0.05) {
           for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
@@ -518,7 +527,7 @@ function executeSkill(skillId) {
       endTurn();
       break;
     case 12:
-      startTargetSelection('SET TRAP', (r, c) => {
+      startTargetSelection('罠を仕掛けるマスを選んでください', (r, c) => {
         if (state.board[r][c].owner === 0) {
           state.board[r][c].trapOwner = state.currentPlayer;
           renderBoard();
@@ -767,6 +776,7 @@ function botDecideAction() {
               const target = cells[Math.floor(Math.random() * cells.length)];
               state.targetCallback(parseInt(target.dataset.row), parseInt(target.dataset.col));
             } else {
+              cancelTargetSelection();
               endTurn();
             }
         }, 300);
