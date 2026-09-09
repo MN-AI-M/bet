@@ -42,16 +42,17 @@ const elements = {
   statusPhase: document.getElementById('status-phase'),
   p1Info: document.getElementById('p1-info'),
   p2Info: document.getElementById('p2-info'),
-  handCards: document.getElementById('hand-cards'),
-  skillActions: document.getElementById('skill-actions'),
-  btnDrawCard: document.getElementById('btn-draw-card'),
-  btnSkipAction: document.getElementById('btn-skip-action'),
-  targetPrompt: document.getElementById('target-prompt'),
-  btnCancelTarget: document.getElementById('btn-cancel-target'),
   gameLog: document.getElementById('game-log'),
   modalResult: document.getElementById('modal-result'),
   resultTitle: document.getElementById('result-title'),
-  resultMessage: document.getElementById('result-message')
+  resultMessage: document.getElementById('result-message'),
+  modalGetCard: document.getElementById('modal-get-card'),
+  getCardTitle: document.getElementById('get-card-title'),
+  getCardDesc: document.getElementById('get-card-desc'),
+  modalSkills: document.getElementById('modal-skills'),
+  skillsList: document.getElementById('skills-list'),
+  btnSkipSkill: document.getElementById('btn-skip-skill'),
+  dragProxy: document.getElementById('drag-proxy')
 };
 
 /* =======================================
@@ -65,7 +66,6 @@ function initBgDemo() {
   const bgBoardEl = document.getElementById('bg-board');
   if (!bgBoardEl) return;
 
-  // 盤面クリア＆生成
   bgBoardEl.innerHTML = '';
   bgBoardState = Array.from({ length: BOARD_SIZE }, () =>
     Array.from({ length: BOARD_SIZE }, () => ({ owner: 0, isPhantom: false, promisedOwner: 0, trapOwner: 0 }))
@@ -82,7 +82,6 @@ function initBgDemo() {
     }
   }
 
-  // 自動対戦ループの開始（500ms周期）
   if (bgDemoInterval) clearInterval(bgDemoInterval);
   bgDemoInterval = setInterval(stepBgDemo, 500);
 }
@@ -150,11 +149,15 @@ function init() {
   elements.btnPvp.addEventListener('click', () => setMode('pvp'));
   elements.btnPve.addEventListener('click', () => setMode('pve'));
   elements.btnStart.addEventListener('click', startGame);
-  elements.btnDrawCard.addEventListener('click', handleDrawCard);
-  elements.btnSkipAction.addEventListener('click', handleSkipAction);
-  elements.btnCancelTarget.addEventListener('click', cancelTargetSelection);
+  elements.btnSkipSkill.addEventListener('click', handleSkipAction);
   document.getElementById('btn-restart').addEventListener('click', startGame);
   document.getElementById('btn-to-title').addEventListener('click', showTitleScreen);
+
+  // モーダル背景タップ等での閉じる処理・スキップ
+  elements.modalGetCard.addEventListener('click', () => {
+    elements.modalGetCard.classList.add('hidden');
+    openSkillModal();
+  });
 }
 
 function setMode(mode) {
@@ -165,13 +168,15 @@ function setMode(mode) {
 
 function showTitleScreen() {
   elements.modalResult.classList.add('hidden');
+  elements.modalSkills.classList.add('hidden');
+  elements.modalGetCard.classList.add('hidden');
   elements.screenGame.classList.remove('active');
   elements.screenTitle.classList.add('active');
-  initBgDemo(); // タイトルに戻ったら背景デモ再開
+  initBgDemo();
 }
 
 function startGame() {
-  stopBgDemo(); // ゲーム開始時に背景デモを停止
+  stopBgDemo();
 
   elements.screenTitle.classList.remove('active');
   elements.modalResult.classList.add('hidden');
@@ -231,7 +236,7 @@ function renderBoard() {
 function updateFogOverlay() {
   if (state.fogForPlayer === state.currentPlayer && state.fogArea) {
     const { r, c, size } = state.fogArea;
-    const cellSize = 56;
+    const cellSize = 42; // CSSのセルサイズに合わせる
     elements.fogOverlay.style.top = `${r * cellSize + 20}px`;
     elements.fogOverlay.style.left = `${c * cellSize + 20}px`;
     elements.fogOverlay.style.width = `${size * cellSize - 4}px`;
@@ -249,51 +254,10 @@ function updateUI() {
 
   if (state.phase === 'PLACE') {
     elements.statusPhase.textContent = '1. マスを選んで石を置いてください';
-    elements.skillActions.classList.add('hidden');
-    elements.targetPrompt.classList.add('hidden');
   } else if (state.phase === 'ACTION') {
-    elements.statusPhase.textContent = '2. 技を使うか、カードを引いてください';
-    elements.skillActions.classList.remove('hidden');
-    elements.targetPrompt.classList.add('hidden');
-    
-    if (state.hands[state.currentPlayer].length >= 3) {
-      elements.btnDrawCard.classList.add('hidden');
-      elements.btnSkipAction.classList.remove('hidden');
-    } else {
-      elements.btnDrawCard.classList.remove('hidden');
-      elements.btnSkipAction.classList.add('hidden');
-    }
+    elements.statusPhase.textContent = '2. スキルを使用・確認してください';
   } else if (state.phase === 'TARGET_SELECT') {
-    elements.statusPhase.textContent = '対象のマスを選択中...';
-    elements.skillActions.classList.add('hidden');
-    elements.targetPrompt.classList.remove('hidden');
-  }
-
-  elements.handCards.innerHTML = '';
-  const currentHand = state.hands[state.currentPlayer];
-  
-  if (currentHand.length === 0) {
-    elements.handCards.innerHTML = `<div class="empty-hand-msg">手札はありません</div>`;
-  } else {
-    currentHand.forEach((card, index) => {
-      const cardEl = document.createElement('div');
-      cardEl.className = 'hand-card';
-      if (state.phase === 'ACTION') cardEl.classList.add('clickable');
-      else cardEl.classList.add('disabled');
-      
-      cardEl.innerHTML = `
-        <span class="card-id">技 ${card.id}</span>
-        <div class="card-title">${card.name}</div>
-        <div class="card-desc">${card.desc}</div>
-      `;
-      
-      cardEl.addEventListener('click', () => {
-        if (state.phase === 'ACTION' && (state.mode === 'pvp' || state.currentPlayer === 1)) {
-          handleCardClick(index);
-        }
-      });
-      elements.handCards.appendChild(cardEl);
-    });
+    elements.statusPhase.textContent = '対象のマスを選択してください';
   }
 }
 
@@ -305,8 +269,11 @@ function addLog(text) {
 }
 
 function handleCellClick(r, c) {
-  if (state.phase === 'PLACE') placeStone(r, c);
-  else if (state.phase === 'TARGET_SELECT' && state.targetCallback) state.targetCallback(r, c);
+  if (state.phase === 'PLACE') {
+    placeStone(r, c);
+  } else if (state.phase === 'TARGET_SELECT' && state.targetCallback) {
+    state.targetCallback(r, c);
+  }
 }
 
 function placeStone(r, c) {
@@ -347,12 +314,13 @@ function actionPhase() {
 
   if (state.mode === 'pve' && state.currentPlayer === 2) {
     setTimeout(() => botDecideAction(), 600);
+  } else {
+    // ターン開始時に自動でカードを1枚引いて通知モーダルを表示する
+    handleDrawCard();
   }
 }
 
 function handleDrawCard() {
-  if (state.hands[state.currentPlayer].length >= 3) return;
-
   let drawn = null;
   if (state.overrideNextCard[state.currentPlayer]) {
     const cardId = state.overrideNextCard[state.currentPlayer];
@@ -364,41 +332,67 @@ function handleDrawCard() {
     addLog(`P${state.currentPlayer} はカードを引き「${drawn.name}」を手に入れた。`);
   }
 
-  state.hands[state.currentPlayer].push(drawn);
-  endTurn();
+  state.drawnCard = drawn;
+  if (state.hands[state.currentPlayer].length < 3) {
+    state.hands[state.currentPlayer].push(drawn);
+  }
+
+  // 獲得カード通知モーダルの表示
+  elements.getCardTitle.textContent = drawn.name;
+  elements.getCardDesc.textContent = drawn.desc;
+  elements.modalGetCard.classList.remove('hidden');
+}
+
+function openSkillModal() {
+  elements.modalGetCard.classList.add('hidden');
+  elements.skillsList.innerHTML = '';
+
+  const currentHand = state.hands[state.currentPlayer];
+  if (currentHand.length === 0) {
+    endTurn();
+    return;
+  }
+
+  currentHand.forEach((card, index) => {
+    const cardEl = document.createElement('div');
+    cardEl.className = 'skill-card-item';
+    cardEl.innerHTML = `
+      <div class="card-id">技 ${card.id}</div>
+      <div class="card-title">${card.name}</div>
+      <div class="card-desc">${card.desc}</div>
+    `;
+    cardEl.addEventListener('click', () => {
+      elements.modalSkills.classList.add('hidden');
+      state.hands[state.currentPlayer].splice(index, 1);
+      addLog(`P${state.currentPlayer} は「${card.name}」を発動！`);
+      executeSkill(card.id);
+    });
+    elements.skillsList.appendChild(cardEl);
+  });
+
+  elements.modalSkills.classList.remove('hidden');
 }
 
 function handleSkipAction() {
-  addLog(`P${state.currentPlayer} は何もしませんでした。`);
+  elements.modalSkills.classList.add('hidden');
+  elements.modalGetCard.classList.add('hidden');
+  addLog(`P${state.currentPlayer} はスキルを使用しませんでした。`);
   endTurn();
 }
 
-function handleCardClick(index) {
-  if (state.phase !== 'ACTION') return;
-  const card = state.hands[state.currentPlayer][index];
-  
-  state.hands[state.currentPlayer].splice(index, 1);
-  state.drawnCard = card;
-  updateUI(); 
-  
-  addLog(`P${state.currentPlayer} は「${card.name}」を発動！`);
-  executeSkill(card.id);
-}
-
 function cancelTargetSelection() {
-  if (state.drawnCard) {
-    state.hands[state.currentPlayer].push(state.drawnCard);
-    state.drawnCard = null;
-  }
   state.phase = 'ACTION';
   state.targetCallback = null;
-  
   const cells = elements.board.querySelectorAll('.cell');
   cells.forEach(cell => cell.classList.remove('target-selectable'));
   updateUI();
+  openSkillModal();
 }
 
 function endTurn() {
+  elements.modalSkills.classList.add('hidden');
+  elements.modalGetCard.classList.add('hidden');
+
   state.phantomStones = state.phantomStones.filter(p => {
     p.remainingTurns--;
     if (p.remainingTurns <= 0) {
@@ -480,7 +474,6 @@ function executeSkill(skillId) {
       break;
     case 5:
       addLog(`追加ターン！もう一度自分の番です。`);
-      state.drawnCard = null;
       state.phase = 'PLACE';
       renderBoard(); 
       updateUI();
@@ -588,7 +581,7 @@ function executeSkill(skillId) {
 function startTargetSelection(promptText, callback, filterFn = null) {
   state.phase = 'TARGET_SELECT';
   state.targetCallback = callback;
-  elements.targetPrompt.querySelector('span').textContent = promptText;
+  elements.statusPhase.textContent = promptText;
   
   const cells = elements.board.querySelectorAll('.cell');
   cells.forEach(cell => {
@@ -633,9 +626,8 @@ function endGame(msg) {
 }
 
 /* =======================================
-   最凶AI: 候補数8 × 深さ7 ミニマックス木探索 (α-β枝刈り)
+   AI (Bot) ロジック
 ======================================= */
-
 function botPlaceStone() {
   if (state.phase !== 'PLACE') return;
   const move = getBotBestMoveTreeSearch();
@@ -813,8 +805,6 @@ function botDecideAction() {
   if (useIndex !== -1) {
     const card = hand[useIndex];
     state.hands[2].splice(useIndex, 1);
-    state.drawnCard = card;
-    updateUI();
     addLog(`P2 は「${card.name}」を発動！`);
     
     setTimeout(() => {
@@ -836,6 +826,7 @@ function botDecideAction() {
       }
     }, 400);
   } else {
-    handleDrawCard();
+    addLog(`P2 は何もしませんでした。`);
+    endTurn();
   }
 }
