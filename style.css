@@ -529,16 +529,6 @@ body {
   cursor: grabbing;
 }
 
-/* ドラッグ中に指やマウスに追従するカードの見た目（クローン） */
-.skill-card-dragging {
-  position: fixed;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.85;
-  transform: scale(1.05);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-}
-
 /* 盤面（ドロップターゲット）のスタイル例 */
 .board-cell {
   /* 盤面セルのスタイル */
@@ -548,6 +538,14 @@ body {
 .board-cell.drag-over {
   background-color: rgba(255, 215, 0, 0.3); /* ドロップ可能なときのハイライト */
   border-color: #ffd700;
+}
+.skill-card-dragging {
+  position: fixed;
+  pointer-events: none !important; /* 絶対に下の要素の邪魔をしないようにする */
+  z-index: 9999;
+  opacity: 0.85;
+  transform: scale(1.05);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
 }
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--text-main); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
