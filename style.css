@@ -492,6 +492,10 @@ body {
   width: 90%;
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
+
+
+
+
 #skills-list {
   display: flex;
   gap: 12px;
@@ -500,16 +504,25 @@ body {
   -webkit-overflow-scrolling: touch;
   cursor: grab;
   user-select: none;
+  /* スクロールバーを滑らかにする設定 */
+  scrollbar-width: thin;
 }
 
 #skills-list:active {
   cursor: grabbing;
 }
 
+/* 子要素がドラッグの邪魔をしないようにする */
+#skills-list * {
+  user-select: none;
+  pointer-events: none; /* カード内部のクリック判定を無効化せず親に伝えるため調整 */
+}
+
+/* カードの中身だけクリックを有効化する */
 .skill-card-item {
   flex: 0 0 auto;
   scroll-snap-align: start;
-  /* お好みのカードデザインに調整してください */
+  pointer-events: auto; 
 }
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--text-main); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
