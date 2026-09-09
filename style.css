@@ -352,6 +352,73 @@ body {
   width: 90%;
 }
 
+
+
+
+
+/* ---- 手札・ストック周りのデザイン ---- */
+.hand-cards {
+  display: flex;
+  gap: 8px;
+  min-height: 120px;
+  margin-bottom: 12px;
+}
+
+.hand-card {
+  flex: 1;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hand-card:hover:not(.disabled) {
+  border-color: var(--accent-color);
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+}
+
+.hand-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hand-card .card-id {
+  background-color: var(--accent-color);
+  color: #111;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.hand-card .card-title {
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.hand-card .card-desc {
+  font-size: 0.7rem;
+  color: var(--text-sub);
+}
+
+.empty-hand-msg {
+  width: 100%;
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  background-color: rgba(0,0,0,0.1);
+  border-radius: 8px;
+}
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--accent-color); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
 .modal-content button { width: 100%; margin-bottom: 8px; }
