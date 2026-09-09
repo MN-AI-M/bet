@@ -2,7 +2,7 @@ const BOARD_SIZE = 9;
 const WIN_COUNT = 5;
 
 const SKILLS = [
-  { id: 1, name: "ハズレ", desc: "何も起きない。" },
+  { id: 1, name: "ハズレ", desc: "何も起きない" },
   { id: 2, name: "一手消去", desc: "相手の石1個消去" },
   { id: 3, name: "視界潰し", desc: "相手の視界妨害" },
   { id: 4, name: "一列消去", desc: "相手が並ぶ1列消去" },
@@ -19,12 +19,11 @@ const SKILLS = [
 const state = {
   mode: 'pvp',
   currentPlayer: 1,
-  phase: 'PLACE', // 'PLACE', 'SKILL', 'TARGET_SELECT'
+  phase: 'PLACE', // 'PLACE', 'ACTION', 'TARGET_SELECT'
   board: [],
-  hands: { 1: [], 2: [] }, // 最大3個スタック
-  drawnCard: null,         // 現在発動中のカード
+  hands: { 1: [], 2: [] }, 
+  drawnCard: null,         
   targetCallback: null,
-  
   fogForPlayer: null,
   fogArea: null,
   overrideNextCard: {},
@@ -45,25 +44,25 @@ const elements = {
   p2Info: document.getElementById('p2-info'),
   handCards: document.getElementById('hand-cards'),
   skillActions: document.getElementById('skill-actions'),
-  btnSkipSkill: document.getElementById('btn-skip-skill'),
+  btnDrawCard: document.getElementById('btn-draw-card'),
+  btnSkipAction: document.getElementById('btn-skip-action'),
   targetPrompt: document.getElementById('target-prompt'),
   btnCancelTarget: document.getElementById('btn-cancel-target'),
   gameLog: document.getElementById('game-log'),
   modalResult: document.getElementById('modal-result'),
   resultTitle: document.getElementById('result-title'),
-  resultMessage: document.getElementById('result-message'),
-  btnRestart: document.getElementById('btn-restart'),
-  btnToTitle: document.getElementById('btn-to-title')
+  resultMessage: document.getElementById('result-message')
 };
 
 function init() {
   elements.btnPvp.addEventListener('click', () => setMode('pvp'));
   elements.btnPve.addEventListener('click', () => setMode('pve'));
   elements.btnStart.addEventListener('click', startGame);
-  elements.btnSkipSkill.addEventListener('click', handleSkipSkill);
+  elements.btnDrawCard.addEventListener('click', handleDrawCard);
+  elements.btnSkipAction.addEventListener('click', handleSkipAction);
   elements.btnCancelTarget.addEventListener('click', cancelTargetSelection);
-  elements.btnRestart.addEventListener('click', startGame);
-  elements.btnToTitle.addEventListener('click', showTitleScreen);
+  document.getElementById('btn-restart').addEventListener('click', startGame);
+  document.getElementById('btn-to-title').addEventListener('click', showTitleScreen);
 }
 
 function setMode(mode) {
@@ -131,14 +130,13 @@ function renderBoard() {
       elements.board.appendChild(cell);
     }
   }
-
   updateFogOverlay();
 }
 
 function updateFogOverlay() {
   if (state.fogForPlayer === state.currentPlayer && state.fogArea) {
     const { r, c, size } = state.fogArea;
-    const cellSize = 56; // 52px + gap 4px
+    const cellSize = 56;
     elements.fogOverlay.style.top = `${r * cellSize + 20}px`;
     elements.fogOverlay.style.left = `${c * cellSize + 20}px`;
     elements.fogOverlay.style.width = `${size * cellSize - 4}px`;
@@ -158,17 +156,26 @@ function updateUI() {
     elements.statusPhase.textContent = '1. マスを選んで石を置いてください';
     elements.skillActions.classList.add('hidden');
     elements.targetPrompt.classList.add('hidden');
-  } else if (state.phase === 'SKILL') {
-    elements.statusPhase.textContent = '2. 技を使うか、ターンを終了してください';
+  } else if (state.phase === 'ACTION') {
+    elements.statusPhase.textContent = '2. 技を使うか、カードを引いてください';
     elements.skillActions.classList.remove('hidden');
     elements.targetPrompt.classList.add('hidden');
+    
+    // 手札が3枚なら「引く」を隠し「何もしない」を表示
+    if (state.hands[state.currentPlayer].length >= 3) {
+      elements.btnDrawCard.classList.add('hidden');
+      elements.btnSkipAction.classList.remove('hidden');
+    } else {
+      elements.btnDrawCard.classList.remove('hidden');
+      elements.btnSkipAction.classList.add('hidden');
+    }
   } else if (state.phase === 'TARGET_SELECT') {
     elements.statusPhase.textContent = '対象のマスを選択中...';
     elements.skillActions.classList.add('hidden');
     elements.targetPrompt.classList.remove('hidden');
   }
 
-  // 手札（スタック）の描画
+  // 手札の描画
   elements.handCards.innerHTML = '';
   const currentHand = state.hands[state.currentPlayer];
   
@@ -178,7 +185,8 @@ function updateUI() {
     currentHand.forEach((card, index) => {
       const cardEl = document.createElement('div');
       cardEl.className = 'hand-card';
-      if (state.phase !== 'SKILL') cardEl.classList.add('disabled');
+      if (state.phase === 'ACTION') cardEl.classList.add('clickable');
+      else cardEl.classList.add('disabled');
       
       cardEl.innerHTML = `
         <span class="card-id">技 ${card.id}</span>
@@ -187,7 +195,7 @@ function updateUI() {
       `;
       
       cardEl.addEventListener('click', () => {
-        if (state.phase === 'SKILL' && (state.mode === 'pvp' || state.currentPlayer === 1)) {
+        if (state.phase === 'ACTION' && (state.mode === 'pvp' || state.currentPlayer === 1)) {
           handleCardClick(index);
         }
       });
@@ -204,11 +212,8 @@ function addLog(text) {
 }
 
 function handleCellClick(r, c) {
-  if (state.phase === 'PLACE') {
-    placeStone(r, c);
-  } else if (state.phase === 'TARGET_SELECT' && state.targetCallback) {
-    state.targetCallback(r, c);
-  }
+  if (state.phase === 'PLACE') placeStone(r, c);
+  else if (state.phase === 'TARGET_SELECT' && state.targetCallback) state.targetCallback(r, c);
 }
 
 function placeStone(r, c) {
@@ -240,11 +245,20 @@ function placeStone(r, c) {
     return;
   }
 
-  drawCardPhase();
+  actionPhase();
 }
 
-function drawCardPhase() {
-  state.phase = 'SKILL';
+function actionPhase() {
+  state.phase = 'ACTION';
+  updateUI();
+
+  if (state.mode === 'pve' && state.currentPlayer === 2) {
+    setTimeout(() => botDecideAction(), 800);
+  }
+}
+
+function handleDrawCard() {
+  if (state.hands[state.currentPlayer].length >= 3) return;
 
   let drawn = null;
   if (state.overrideNextCard[state.currentPlayer]) {
@@ -254,53 +268,42 @@ function drawCardPhase() {
     addLog(`すり替え効果で「${drawn.name}」を引かされました！`);
   } else {
     drawn = SKILLS[Math.floor(Math.random() * SKILLS.length)];
-    addLog(`P${state.currentPlayer} は「${drawn.name}」を引きました。`);
+    addLog(`P${state.currentPlayer} はカードを引き「${drawn.name}」を手に入れた。`);
   }
 
-  // 手札追加（上限3）
-  if (state.hands[state.currentPlayer].length < 3) {
-    state.hands[state.currentPlayer].push(drawn);
-  } else {
-    addLog(`手札が一杯のため、引いたカードは破棄されました！`);
-  }
+  state.hands[state.currentPlayer].push(drawn);
+  endTurn(); // 引いたらターン終了
+}
 
-  updateUI();
-
-  if (state.mode === 'pve' && state.currentPlayer === 2) {
-    setTimeout(() => botDecideSkill(), 1000);
-  }
+function handleSkipAction() {
+  addLog(`P${state.currentPlayer} は何もしませんでした。`);
+  endTurn();
 }
 
 function handleCardClick(index) {
-  if (state.phase !== 'SKILL') return;
+  if (state.phase !== 'ACTION') return;
   const card = state.hands[state.currentPlayer][index];
   
-  // 手札から抜き取り発動
+  // 技を使う場合はカードを消費
   state.hands[state.currentPlayer].splice(index, 1);
   state.drawnCard = card;
   updateUI(); 
   
+  addLog(`P${state.currentPlayer} は「${card.name}」を発動！`);
   executeSkill(card.id);
 }
 
 function cancelTargetSelection() {
-  // キャンセル時はカードを手札に復元
   if (state.drawnCard) {
     state.hands[state.currentPlayer].push(state.drawnCard);
     state.drawnCard = null;
   }
-  state.phase = 'SKILL';
+  state.phase = 'ACTION';
   state.targetCallback = null;
   
   const cells = elements.board.querySelectorAll('.cell');
   cells.forEach(cell => cell.classList.remove('target-selectable'));
   updateUI();
-}
-
-function handleSkipSkill() {
-  if (state.phase !== 'SKILL') return;
-  addLog(`P${state.currentPlayer} はターンを終了しました。`);
-  endTurn();
 }
 
 function endTurn() {
@@ -320,11 +323,12 @@ function endTurn() {
   if (state.fogForPlayer === state.currentPlayer) {
     state.fogForPlayer = null;
     state.fogArea = null;
+    addLog(`P${state.currentPlayer} の視界妨害が晴れた！`);
   }
 
-  state.drawnCard = null;
   state.currentPlayer = state.currentPlayer === 1 ? 2 : 1;
   state.phase = 'PLACE';
+  state.drawnCard = null;
 
   renderBoard();
   updateUI();
@@ -334,285 +338,391 @@ function endTurn() {
   }
 }
 
-// ---- 12種の技処理 ----
+/* =======================================
+   スキル実行処理
+======================================= */
 function executeSkill(skillId) {
-  const opponent = state.currentPlayer === 1 ? 2 : 1;
+  const targetOpponent = state.currentPlayer === 1 ? 2 : 1;
 
   switch (skillId) {
     case 1:
-      addLog('ハズレ！何も起きませんでした。');
+      addLog(`ハズレ... 何も起こりません。`);
       endTurn();
       break;
     case 2:
-      const oppStones = getPlayerStones(opponent);
-      if (oppStones.length > 0) {
-        const target = oppStones[Math.floor(Math.random() * oppStones.length)];
-        state.board[target.r][target.c].owner = 0;
-        addLog(`相手の (${target.r + 1}, ${target.c + 1}) を消去！`);
-      } else { addLog('消去可能な相手の石がありません。'); }
-      endTurn();
+      startTargetSelection('相手の石を選んでください', (r, c) => {
+        if (state.board[r][c].owner === targetOpponent) {
+          state.board[r][c].owner = 0;
+          addLog(`(${r + 1}, ${c + 1}) の相手の石を消去！`);
+          renderBoard();
+          endTurn();
+        } else {
+          addLog('相手の石を選択してください。');
+        }
+      }, c => c.owner === targetOpponent);
       break;
     case 3:
-      state.fogForPlayer = opponent;
-      state.fogArea = { r: Math.floor(Math.random() * 5), c: Math.floor(Math.random() * 5), size: 4 };
+      const tr = Math.floor(Math.random() * (BOARD_SIZE - 2));
+      const tc = Math.floor(Math.random() * (BOARD_SIZE - 2));
+      state.fogForPlayer = targetOpponent;
+      state.fogArea = { r: tr, c: tc, size: 3 };
       addLog(`相手の視界の一部を奪いました！`);
       endTurn();
       break;
     case 4:
-      let maxCount = -1, bestLine = null;
-      for (let i = 0; i < BOARD_SIZE; i++) {
-        let rowCount = 0, colCount = 0;
-        for (let j = 0; j < BOARD_SIZE; j++) {
-          if (state.board[i][j].owner === opponent) rowCount++;
-          if (state.board[j][i].owner === opponent) colCount++;
-        }
-        if (rowCount > maxCount) { maxCount = rowCount; bestLine = { type: 'row', index: i }; }
-        if (colCount > maxCount) { maxCount = colCount; bestLine = { type: 'col', index: i }; }
-      }
-      if (bestLine && maxCount > 0) {
-        if (bestLine.type === 'row') {
-          for (let c = 0; c < BOARD_SIZE; c++) if (state.board[bestLine.index][c].owner === opponent) state.board[bestLine.index][c].owner = 0;
-          addLog(`${bestLine.index + 1} 行目の相手の石を一列消去！`);
+      startTargetSelection('相手の石を選んでください（その行または列を消去）', (r, c) => {
+        if (state.board[r][c].owner === targetOpponent) {
+          const isRow = Math.random() < 0.5;
+          let count = 0;
+          for (let i = 0; i < BOARD_SIZE; i++) {
+            if (isRow && state.board[r][i].owner === targetOpponent) { state.board[r][i].owner = 0; count++; }
+            if (!isRow && state.board[i][c].owner === targetOpponent) { state.board[i][c].owner = 0; count++; }
+          }
+          addLog(`${isRow ? '行' : '列'}を消去！相手の石が ${count} 個消えた！`);
+          renderBoard();
+          endTurn();
         } else {
-          for (let r = 0; r < BOARD_SIZE; r++) if (state.board[r][bestLine.index].owner === opponent) state.board[r][bestLine.index].owner = 0;
-          addLog(`${bestLine.index + 1} 列目の相手の石を一列消去！`);
+          addLog('相手の石を選択してください。');
         }
-      } else { addLog('消去できる列がありません。'); }
-      endTurn();
+      }, c => c.owner === targetOpponent);
       break;
     case 5:
       addLog(`追加ターン！もう一度自分の番です。`);
       state.drawnCard = null;
       state.phase = 'PLACE';
-      renderBoard(); updateUI();
-      if (state.mode === 'pve' && state.currentPlayer === 2) setTimeout(() => botPlaceStone(), 600);
+      renderBoard(); 
+      updateUI();
+      if (state.mode === 'pve' && state.currentPlayer === 2) {
+        setTimeout(() => botPlaceStone(), 600);
+      }
       break;
     case 6:
       if (Math.random() < 0.05) {
-        const stones = getPlayerStones(opponent);
-        for (let i = 0; i < 2 && stones.length > 0; i++) {
-          const tgt = stones.splice(Math.floor(Math.random() * stones.length), 1)[0];
-          state.board[tgt.r][tgt.c].owner = 0;
+        let removed = 0;
+        for (let i = 0; i < 100 && removed < 2; i++) {
+          let rr = Math.floor(Math.random() * BOARD_SIZE);
+          let cc = Math.floor(Math.random() * BOARD_SIZE);
+          if (state.board[rr][cc].owner === targetOpponent) {
+            state.board[rr][cc].owner = 0;
+            removed++;
+          }
         }
-        addLog(`✨ 5%の発動成功！相手の石を2個消去！`);
-      } else { addLog(`強制リセット失敗... (5%を外しました)`); }
+        addLog(`強制リセット成功(5%)！相手の石を ${removed} 個消去！`);
+      } else {
+        addLog(`強制リセット失敗... 何も起こらない。`);
+      }
+      renderBoard();
       endTurn();
       break;
     case 7:
-      selectTarget((r, c) => {
+      startTargetSelection('色を変えるマスを選んでください', (r, c) => {
         state.board[r][c].owner = state.currentPlayer;
         state.board[r][c].isPhantom = false;
-        addLog(`(${r + 1}, ${c + 1}) を自分の色に浸食！`);
+        addLog(`(${r + 1}, ${c + 1}) を自色に浸食！`);
+        renderBoard();
         if (checkWin(state.currentPlayer)) endGame(`Player ${state.currentPlayer} の勝利！`);
         else endTurn();
       });
       break;
     case 8:
-      selectTarget((r, c) => {
-        state.board[r][c].promisedOwner = state.currentPlayer;
-        addLog(`(${r + 1}, ${c + 1}) を確約マスに設定。`);
+      startTargetSelection('確約する空きマスを選んでください', (r, c) => {
+        if (state.board[r][c].owner === 0) {
+          state.board[r][c].promisedOwner = state.currentPlayer;
+          addLog(`(${r + 1}, ${c + 1}) に相手は置けなくなりました！`);
+          renderBoard();
+          endTurn();
+        } else {
+          addLog('空いているマスを選んでください。');
+        }
+      }, c => c.owner === 0);
+      break;
+    case 9:
+      startTargetSelection('爆弾を落とす中心マスを選んでください', (r, c) => {
+        if (Math.random() < 0.05) {
+          let count = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              let nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && state.board[nr][nc].owner !== 0) {
+                state.board[nr][nc].owner = 0;
+                count++;
+              }
+            }
+          }
+          addLog(`💥 爆弾成功(5%)！ 3x3の範囲から ${count} 個の石を吹き飛ばした！`);
+        } else {
+          addLog(`不発... 爆弾は作動しなかった(95%)。`);
+        }
+        renderBoard();
         endTurn();
       });
       break;
-    case 9:
-      if (Math.random() < 0.05) {
-        selectTarget((cr, cc) => {
-          for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
-              const tr = cr + dr, tc = cc + dc;
-              if (tr >= 0 && tr < BOARD_SIZE && tc >= 0 && tc < BOARD_SIZE) state.board[tr][tc].owner = 0;
-            }
-          }
-          addLog(`💣 爆弾発動！(${cr + 1}, cc + 1}) 周囲3x3を消去！`);
-          endTurn();
-        });
-      } else {
-        addLog(`爆弾不発... (5%を外しました)`);
-        endTurn();
-      }
-      break;
     case 10:
-      let placed = 0;
-      for (let i = 0; i < 20 && placed < 3; i++) {
-        const r = Math.floor(Math.random() * BOARD_SIZE), c = Math.floor(Math.random() * BOARD_SIZE);
-        if (state.board[r][c].owner === 0) {
-          state.board[r][c].owner = state.currentPlayer;
-          state.board[r][c].isPhantom = true;
-          state.phantomStones.push({ r, c, owner: state.currentPlayer, remainingTurns: 3 });
-          placed++;
+      let phantoms = 0;
+      for (let i = 0; i < 50 && phantoms < 3; i++) {
+        let rr = Math.floor(Math.random() * BOARD_SIZE);
+        let cc = Math.floor(Math.random() * BOARD_SIZE);
+        if (state.board[rr][cc].owner === 0) {
+          state.board[rr][cc].owner = state.currentPlayer;
+          state.board[rr][cc].isPhantom = true;
+          state.phantomStones.push({ r: rr, c: cc, remainingTurns: 3 });
+          phantoms++;
         }
       }
-      addLog(`3マスの「幻影」を配置しました。`);
+      addLog(`幻影の石を ${phantoms} 個配置しました(3ターンで消滅)。`);
+      renderBoard();
       endTurn();
       break;
     case 11:
-      state.overrideNextCard[opponent] = 1;
-      addLog(`相手の次のカードを「ハズレ」にすり替えました！`);
+      state.overrideNextCard[targetOpponent] = 1; // ハズレ
+      addLog(`相手の次回のドローを「ハズレ」にすり替えた！`);
       endTurn();
       break;
     case 12:
-      selectTarget((r, c) => {
-        if (state.board[r][c].owner !== 0) { addLog('空きマス以外には罠を置けません。'); return; }
-        state.board[r][c].trapOwner = state.currentPlayer;
-        addLog(`(${r + 1}, ${c + 1}) に秘匿罠を設置しました。`);
-        endTurn();
-      });
+      startTargetSelection('罠を仕掛ける空きマスを選んでください', (r, c) => {
+        if (state.board[r][c].owner === 0) {
+          state.board[r][c].trapOwner = state.currentPlayer;
+          addLog(`(${r + 1}, ${c + 1}) に罠を仕掛けました！`);
+          renderBoard();
+          endTurn();
+        } else {
+          addLog('空いているマスを選んでください。');
+        }
+      }, c => c.owner === 0);
       break;
   }
 }
 
-function selectTarget(callback) {
-  if (state.mode === 'pve' && state.currentPlayer === 2) {
-    const bestCell = getBotBestTargetCell();
-    callback(bestCell.r, bestCell.c);
-    return;
-  }
+function startTargetSelection(promptText, callback, filterFn = null) {
   state.phase = 'TARGET_SELECT';
   state.targetCallback = callback;
-  updateUI();
+  elements.targetPrompt.querySelector('span').textContent = promptText;
+  
   const cells = elements.board.querySelectorAll('.cell');
-  cells.forEach(cell => cell.classList.add('target-selectable'));
-}
-
-function getPlayerStones(player) {
-  const list = [];
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      if (state.board[r][c].owner === player) list.push({ r, c });
+  cells.forEach(cell => {
+    const r = parseInt(cell.dataset.row);
+    const c = parseInt(cell.dataset.col);
+    if (!filterFn || filterFn(state.board[r][c])) {
+      cell.classList.add('target-selectable');
     }
-  }
-  return list;
+  });
+  updateUI();
 }
 
+
+/* =======================================
+   勝利判定
+======================================= */
 function checkWin(player) {
   const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
-      if (state.board[r][c].owner !== player || state.board[r][c].isPhantom) continue;
-      for (let [dr, dc] of directions) {
-        let count = 1;
-        for (let step = 1; step < WIN_COUNT; step++) {
-          const tr = r + dr * step, tc = c + dc * step;
-          if (tr >= 0 && tr < BOARD_SIZE && tc >= 0 && tc < BOARD_SIZE &&
-              state.board[tr][tc].owner === player && !state.board[tr][tc].isPhantom) { count++; }
-          else break;
+      if (state.board[r][c].owner === player && !state.board[r][c].isPhantom) {
+        for (let [dr, dc] of directions) {
+          let count = 1;
+          for (let i = 1; i < WIN_COUNT; i++) {
+            let nr = r + dr * i, nc = c + dc * i;
+            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && state.board[nr][nc].owner === player && !state.board[nr][nc].isPhantom) {
+              count++;
+            } else break;
+          }
+          if (count >= WIN_COUNT) return true;
         }
-        if (count >= WIN_COUNT) return true;
       }
     }
   }
   return false;
 }
 
-function endGame(message) {
+function endGame(msg) {
   elements.resultTitle.textContent = "GAME OVER";
-  elements.resultMessage.textContent = message;
+  elements.resultMessage.textContent = msg;
   elements.modalResult.classList.remove('hidden');
 }
 
-// ---- Bot(AI) 思考ロジック ----
+/* =======================================
+   AI (ガチBot) 改修：評価関数の大幅強化
+======================================= */
+
+// 石を置くフェーズ
 function botPlaceStone() {
-  const bestMove = evaluateBestMove(2);
-  placeStone(bestMove.r, bestMove.c);
+  if (state.phase !== 'PLACE') return;
+  const move = getBotBestMove();
+  placeStone(move.r, move.c);
 }
 
-function botDecideSkill() {
-  if (state.phase !== 'SKILL') return;
-  const hand = state.hands[2];
+// 候補手（石があるマスの周囲2マスのみに絞ることで高速化）
+function getCandidateMoves(botPlayer) {
+  const moves = [];
+  const hasStone = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(false));
+  let emptyCount = 0;
   
-  if (hand.length === 0) {
-    handleSkipSkill();
-    return;
-  }
-
-  let useIndex = -1;
-  // 手札評価: 強力な技は優先して使う
-  for (let i = 0; i < hand.length; i++) {
-    const id = hand[i].id;
-    if ([4, 5, 7, 8, 12, 2, 3].includes(id)) {
-      useIndex = i;
-      break;
+  for(let r=0; r<BOARD_SIZE; r++){
+    for(let c=0; c<BOARD_SIZE; c++){
+      if(state.board[r][c].owner !== 0 && !state.board[r][c].isPhantom){
+        for(let dr=-2; dr<=2; dr++){
+          for(let dc=-2; dc<=2; dc++){
+            const nr = r+dr, nc = c+dc;
+            if(nr>=0 && nr<BOARD_SIZE && nc>=0 && nc<BOARD_SIZE){
+              hasStone[nr][nc] = true;
+            }
+          }
+        }
+      } else if (state.board[r][c].owner === 0) {
+        emptyCount++;
+      }
     }
   }
-  // 手札が3枚で溢れそうな場合は何かしら使う。それ以外は30%の確率で温存せずに使う。
-  if (useIndex === -1 && hand.length === 3) useIndex = 0;
-  else if (useIndex === -1 && Math.random() < 0.3) useIndex = 0;
+  
+  if(emptyCount === BOARD_SIZE*BOARD_SIZE) return [{r:4, c:4}];
+
+  for(let r=0; r<BOARD_SIZE; r++){
+    for(let c=0; c<BOARD_SIZE; c++){
+      if(state.board[r][c].owner === 0 && hasStone[r][c] && state.board[r][c].promisedOwner !== 1){
+         moves.push({r, c});
+      }
+    }
+  }
+  return moves;
+}
+
+// 五目並べに特化した超強力な評価関数（指定マスに置いた時の価値）
+function evaluateCellImpact(r, c, player) {
+  const directions = [[0,1], [1,0], [1,1], [1,-1]];
+  let totalScore = 0;
+  
+  for (let [dr, dc] of directions) {
+    let count = 1;
+    let openEnds = 0;
+    
+    // 正方向の確認
+    let i = 1;
+    for (; i < WIN_COUNT; i++) {
+      const tr = r + dr * i, tc = c + dc * i;
+      if (tr < 0 || tr >= BOARD_SIZE || tc < 0 || tc >= BOARD_SIZE) break;
+      if (state.board[tr][tc].owner === player && !state.board[tr][tc].isPhantom) count++;
+      else break;
+    }
+    // 遮られていなければ端は開いているとみなす
+    if (i < WIN_COUNT) {
+      const tr = r + dr * i, tc = c + dc * i;
+      if (tr >= 0 && tr < BOARD_SIZE && tc >= 0 && tc < BOARD_SIZE && state.board[tr][tc].owner === 0) {
+        openEnds++;
+      }
+    } else { openEnds++; }
+
+    // 負方向の確認
+    let j = 1;
+    for (; j < WIN_COUNT; j++) {
+      const tr = r - dr * j, tc = c - dc * j;
+      if (tr < 0 || tr >= BOARD_SIZE || tc < 0 || tc >= BOARD_SIZE) break;
+      if (state.board[tr][tc].owner === player && !state.board[tr][tc].isPhantom) count++;
+      else break;
+    }
+    if (j < WIN_COUNT) {
+      const tr = r - dr * j, tc = c - dc * j;
+      if (tr >= 0 && tr < BOARD_SIZE && tc >= 0 && tc < BOARD_SIZE && state.board[tr][tc].owner === 0) {
+        openEnds++;
+      }
+    } else { openEnds++; }
+
+    // 【リーチの厳密なスコアリング】
+    if (count >= 5) totalScore += 1000000;         // 5連：勝ち確
+    else if (count === 4 && openEnds >= 1) totalScore += 100000;  // 片側でも開いた4連：実質勝ち確（相手なら即死）
+    else if (count === 3 && openEnds === 2) totalScore += 50000;  // 両端空きの3連：次で止められない両端空き4連になる
+    else if (count === 3 && openEnds === 1) totalScore += 500;
+    else if (count === 2 && openEnds === 2) totalScore += 300;
+    else if (count === 2 && openEnds === 1) totalScore += 50;
+    else if (count === 1 && openEnds === 2) totalScore += 10;
+  }
+  return totalScore;
+}
+
+// 候補手の中で最善手を探す
+function getBotBestMove() {
+  const botPlayer = 2;
+  const oppPlayer = 1;
+  const moves = getCandidateMoves(botPlayer);
+  
+  let bestScore = -Infinity;
+  let bestMoves = [];
+
+  for (let m of moves) {
+    // 相手が置いたら勝つ場所（両端空きの3連や開いた4連など）を防ぐため、
+    // 自分が置いたときのスコアだけでなく、相手が置いたときのスコアも重視(1.2倍)して加算
+    let score = evaluateCellImpact(m.r, m.c, botPlayer) + evaluateCellImpact(m.r, m.c, oppPlayer) * 1.2;
+    
+    // 中央付近への軽いボーナス
+    score += (10 - (Math.abs(m.r - 4) + Math.abs(m.c - 4)));
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [m];
+    } else if (score === bestScore) {
+      bestMoves.push(m);
+    }
+  }
+
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)] || {r: 4, c: 4};
+}
+
+// アクション（技を使うかカードを引くか）の思考
+function botDecideAction() {
+  if (state.phase !== 'ACTION') return;
+  const hand = state.hands[2];
+  
+  let useIndex = -1;
+
+  // 手札を評価
+  for (let i = 0; i < hand.length; i++) {
+    const cardId = hand[i].id;
+    // 追加ターンは最強なので即使用
+    if (cardId === 5) { useIndex = i; break; }
+    
+    // 盤面に相手の石が多いほど使いやすい技を優先
+    if (Math.random() < 0.3) {
+      if ([2, 4, 7, 8, 12].includes(cardId)) {
+        useIndex = i; break;
+      }
+    }
+  }
+
+  // 手札が一杯(3枚)なら適当なものを必ず使う
+  if (useIndex === -1 && hand.length >= 3) {
+    useIndex = Math.floor(Math.random() * hand.length);
+  }
 
   if (useIndex !== -1) {
     const card = hand[useIndex];
     state.hands[2].splice(useIndex, 1);
     state.drawnCard = card;
     updateUI();
-    setTimeout(() => executeSkill(card.id), 600);
+    addLog(`P2 は「${card.name}」を発動！`);
+    
+    setTimeout(() => {
+      // ターゲット指定が必要な技のBotの自動選択ロジック
+      const needsTarget = [2, 4, 7, 8, 9, 12].includes(card.id);
+      if (needsTarget) {
+        executeSkill(card.id); 
+        // startTargetSelectionをフックしてランダムに選ばせる
+        setTimeout(() => {
+            const cells = Array.from(elements.board.querySelectorAll('.target-selectable'));
+            if (cells.length > 0) {
+              const target = cells[Math.floor(Math.random() * cells.length)];
+              state.targetCallback(parseInt(target.dataset.row), parseInt(target.dataset.col));
+            } else {
+              cancelTargetSelection();
+              endTurn();
+            }
+        }, 500);
+      } else {
+        executeSkill(card.id);
+      }
+    }, 600);
   } else {
-    handleSkipSkill();
+    // 技を使わない場合はカードを引く
+    handleDrawCard();
   }
 }
 
-function getBotBestTargetCell() {
-  let bestScore = -Infinity;
-  let bestCell = { r: 4, c: 4 };
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      const score = evaluateCellImpact(r, c, 2);
-      if (score > bestScore) { bestScore = score; bestCell = { r, c }; }
-    }
-  }
-  return bestCell;
-}
-
-function evaluateBestMove(botPlayer) {
-  const oppPlayer = botPlayer === 1 ? 2 : 1;
-  let bestScore = -Infinity, bestMoves = [];
-
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      const cell = state.board[r][c];
-      if (cell.owner !== 0 && !cell.isPhantom) continue;
-      if (cell.promisedOwner !== 0 && cell.promisedOwner !== botPlayer) continue;
-
-      cell.owner = botPlayer;
-      if (checkWin(botPlayer)) { cell.owner = 0; return { r, c }; }
-      
-      cell.owner = oppPlayer;
-      let blockOppWin = checkWin(oppPlayer);
-      cell.owner = 0;
-      if (blockOppWin) return { r, c };
-
-      let score = evaluateCellImpact(r, c, botPlayer) + evaluateCellImpact(r, c, oppPlayer) * 0.9;
-      score += (10 - (Math.abs(r - 4) + Math.abs(c - 4)));
-
-      if (score > bestScore) { bestScore = score; bestMoves = [{ r, c }]; }
-      else if (score === bestScore) { bestMoves.push({ r, c }); }
-    }
-  }
-  return bestMoves[Math.floor(Math.random() * bestMoves.length)] || { r: 4, c: 4 };
-}
-
-function evaluateCellImpact(r, c, player) {
-  const directions = [[0,1], [1,0], [1,1], [1,-1]];
-  let totalScore = 0;
-  for (let [dr, dc] of directions) {
-    let count = 1, openEnds = 0;
-    for (let i = 1; i < WIN_COUNT; i++) {
-      const tr = r + dr * i, tc = c + dc * i;
-      if (tr < 0 || tr >= BOARD_SIZE || tc < 0 || tc >= BOARD_SIZE) break;
-      if (state.board[tr][tc].owner === player && !state.board[tr][tc].isPhantom) count++;
-      else { if (state.board[tr][tc].owner === 0) openEnds++; break; }
-    }
-    for (let i = 1; i < WIN_COUNT; i++) {
-      const tr = r - dr * i, tc = c - dc * i;
-      if (tr < 0 || tr >= BOARD_SIZE || tc < 0 || tc >= BOARD_SIZE) break;
-      if (state.board[tr][tc].owner === player && !state.board[tr][tc].isPhantom) count++;
-      else { if (state.board[tr][tc].owner === 0) openEnds++; break; }
-    }
-    if (count >= 5) totalScore += 10000;
-    else if (count === 4 && openEnds >= 1) totalScore += 1000;
-    else if (count === 3 && openEnds >= 2) totalScore += 200;
-    else if (count === 3 && openEnds === 1) totalScore += 50;
-    else if (count === 2 && openEnds >= 2) totalScore += 20;
-  }
-  return totalScore;
-}
-
-window.addEventListener('DOMContentLoaded', init);
+init();
