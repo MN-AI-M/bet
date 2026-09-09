@@ -474,15 +474,24 @@ function handleDrawCard() {
 }
 
 function openSkillModal() {
-  elements.modalGetCard.classList.add('hidden');
-  elements.skillsList.innerHTML = '';
-
   const currentHand = state.hands[state.currentPlayer];
-  if (currentHand.length === 0) {
+  
+  // 手札が0枚ならモーダルを開かずに即ターン終了
+  if (!currentHand || currentHand.length === 0) {
     endTurn();
     return;
   }
 
+  // モーダルの初期化と表示
+  elements.modalGetCard.classList.add('hidden');
+  elements.skillsList.innerHTML = '';
+
+  const modal = document.getElementById('skill-modal');
+  if (modal) {
+    modal.style.display = 'block';
+  }
+
+  // 手札のカードを1枚ずつ生成してドラッグ機能を付与
   currentHand.forEach((card, index) => {
     const cardEl = document.createElement('div');
     cardEl.className = 'skill-card-item';
@@ -490,21 +499,19 @@ function openSkillModal() {
       <div class="card-title">${card.name}</div>
       <div class="card-desc">${card.desc}</div>
     `;
-    cardEl.addEventListener('click', () => {
-      closeSkillModalSmooth(() => {
-        state.hands[state.currentPlayer].splice(index, 1);
-        executeSkill(card.id);
-      });
-    });
+
+    // クリックの代わりにドラッグ＆ドロップ機能を適用
+    setupSkillDragAndDrop(cardEl, card, index);
+
     elements.skillsList.appendChild(cardEl);
   });
 
+  // モーダル表示のアニメーション
   elements.modalSkills.classList.remove('hidden');
   requestAnimationFrame(() => {
     elements.modalSkills.classList.add('show');
   });
 }
-
 function closeSkillModalSmooth(callback) {
   elements.modalSkills.classList.remove('show');
   setTimeout(() => {
