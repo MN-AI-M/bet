@@ -112,22 +112,19 @@ function renderBgBoard() {
 }
 
 function stepBgDemo() {
-  // 候補手から高速に最善手を取得（背景用なので深さ1〜2相当の高速計算）
   const candidates = getTopCandidateMoves(bgBoardState, bgCurrentPlayer, 5);
   if (candidates.length === 0 || checkWinBoard(bgBoardState, 1) || checkWinBoard(bgBoardState, 2)) {
-    // どちらかが勝ったか置けなくなったら再スタート
     initBgDemo();
     return;
   }
 
-  // 候補の中から少しランダム性を持たせて手を打つ
   const move = candidates[Math.floor(Math.random() * Math.min(2, candidates.length))];
   bgBoardState[move.r][move.c].owner = bgCurrentPlayer;
 
   renderBgBoard();
 
   if (checkWinBoard(bgBoardState, bgCurrentPlayer)) {
-    setTimeout(initBgDemo, 1500); // 決着後1.5秒待ってリセット
+    setTimeout(initBgDemo, 1500);
   } else {
     bgCurrentPlayer = bgCurrentPlayer === 1 ? 2 : 1;
   }
@@ -144,7 +141,6 @@ function stopBgDemo() {
    メインゲーム ロジック
 ======================================= */
 
-// 起動時に背景デモを開始
 window.addEventListener('DOMContentLoaded', () => {
   init();
   initBgDemo();
@@ -171,7 +167,7 @@ function showTitleScreen() {
   elements.modalResult.classList.add('hidden');
   elements.screenGame.classList.remove('active');
   elements.screenTitle.classList.add('active');
-  initBgDemo(); // タイトルに戻ったらデモ再生開始
+  initBgDemo(); // タイトルに戻ったら背景デモ再開
 }
 
 function startGame() {
@@ -327,7 +323,7 @@ function placeStone(r, c) {
 
   cell.owner = state.currentPlayer;
   cell.isPhantom = false;
-  addLog(`P${state.currentPlayer} が (${r + 1}, c + 1) に石を配置。`); // 表示上は1-index
+  addLog(`P${state.currentPlayer} が (${r + 1}, ${c + 1}) に石を配置。`);
 
   if (cell.trapOwner !== 0 && cell.trapOwner !== state.currentPlayer) {
     cell.owner = 0;
@@ -636,7 +632,6 @@ function endGame(msg) {
   elements.modalResult.classList.remove('hidden');
 }
 
-
 /* =======================================
    最凶AI: 候補数8 × 深さ7 ミニマックス木探索 (α-β枝刈り)
 ======================================= */
@@ -647,7 +642,6 @@ function botPlaceStone() {
   placeStone(move.r, move.c);
 }
 
-// 候補手抽出とスコアリング（Top 8に絞り込むための1手評価）
 function evaluateCellImpact(board, r, c, player) {
   const directions = [[0,1], [1,0], [1,1], [1,-1]];
   let totalScore = 0;
@@ -690,7 +684,6 @@ function evaluateCellImpact(board, r, c, player) {
   return totalScore;
 }
 
-// 静的盤面評価関数（全体の形をスコア化）
 function evaluateBoardState(board, botPlayer) {
   const oppPlayer = botPlayer === 1 ? 2 : 1;
   let botScore = 0;
@@ -705,7 +698,6 @@ function evaluateBoardState(board, botPlayer) {
   return botScore - oppScore * 1.2;
 }
 
-// 候補手を上位8手に絞り込み (a = 8)
 function getTopCandidateMoves(board, currentPlayer, topK = 8) {
   const moves = [];
   const oppPlayer = currentPlayer === 1 ? 2 : 1;
@@ -742,12 +734,10 @@ function getTopCandidateMoves(board, currentPlayer, topK = 8) {
   return moves.slice(0, topK);
 }
 
-// α-β枝刈り付きミニマックス深さ7木探索
 function minimax(board, depth, alpha, beta, isMaximizing, botPlayer) {
   const oppPlayer = botPlayer === 1 ? 2 : 1;
 
-  // 終局チェック
-  if (checkWinBoard(board, botPlayer)) return 10000000 + depth * 10000; // 浅いターンでの勝利を優先
+  if (checkWinBoard(board, botPlayer)) return 10000000 + depth * 10000;
   if (checkWinBoard(board, oppPlayer)) return -10000000 - depth * 10000;
   if (depth === 0) return evaluateBoardState(board, botPlayer);
 
@@ -759,11 +749,11 @@ function minimax(board, depth, alpha, beta, isMaximizing, botPlayer) {
     for (let move of candidates) {
       board[move.r][move.c].owner = botPlayer;
       const evaluation = minimax(board, depth - 1, alpha, beta, false, botPlayer);
-      board[move.r][move.c].owner = 0; // バックトラック
+      board[move.r][move.c].owner = 0;
 
       maxEval = Math.max(maxEval, evaluation);
       alpha = Math.max(alpha, evaluation);
-      if (beta <= alpha) break; // βカットオフ
+      if (beta <= alpha) break;
     }
     return maxEval;
   } else {
@@ -771,17 +761,16 @@ function minimax(board, depth, alpha, beta, isMaximizing, botPlayer) {
     for (let move of candidates) {
       board[move.r][move.c].owner = oppPlayer;
       const evaluation = minimax(board, depth - 1, alpha, beta, true, botPlayer);
-      board[move.r][move.c].owner = 0; // バックトラック
+      board[move.r][move.c].owner = 0;
 
       minEval = Math.min(minEval, evaluation);
       beta = Math.min(beta, evaluation);
-      if (beta <= alpha) break; // αカットオフ
+      if (beta <= alpha) break;
     }
     return minEval;
   }
 }
 
-// 木探索により最善手を選択 (深さ d = 7)
 function getBotBestMoveTreeSearch() {
   const botPlayer = 2;
   const candidates = getTopCandidateMoves(state.board, botPlayer, 8);
@@ -789,7 +778,7 @@ function getBotBestMoveTreeSearch() {
   let bestScore = -Infinity;
   let bestMove = candidates[0] || { r: 4, c: 4 };
 
-  const MAX_DEPTH = 7; // 深さ7設定
+  const MAX_DEPTH = 7;
 
   for (let move of candidates) {
     state.board[move.r][move.c].owner = botPlayer;
@@ -805,14 +794,13 @@ function getBotBestMoveTreeSearch() {
   return bestMove;
 }
 
-// Botのアクション思考
 function botDecideAction() {
   if (state.phase !== 'ACTION') return;
   const hand = state.hands[2];
   let useIndex = -1;
 
   for (let i = 0; i < hand.length; i++) {
-    if (hand[i].id === 5) { useIndex = i; break; } // 追加ターン優先
+    if (hand[i].id === 5) { useIndex = i; break; }
     if (Math.random() < 0.3 && [2, 4, 7, 8, 12].includes(hand[i].id)) {
       useIndex = i; break;
     }
