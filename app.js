@@ -161,10 +161,13 @@ function init() {
 // マウスドラッグで横スクロール（スワイプ）できるようにする設定
 function initDraggableScroll() {
   const slider = elements.skillsList;
+  if (!slider) return;
+
   let isDown = false;
   let startX;
   let scrollLeft;
 
+  // --- マウス操作 ---
   slider.addEventListener('mousedown', (e) => {
     isDown = true;
     slider.classList.add('active');
@@ -186,11 +189,28 @@ function initDraggableScroll() {
     if (!isDown) return;
     e.preventDefault();
     const x = e.pageX - slider.offsetLeft;
-    const walk = (x - startX) * 2; // スクロール速度調整
+    const walk = (x - startX) * 1.5; // スクロール感度
     slider.scrollLeft = scrollLeft - walk;
   });
-}
 
+  // --- タッチ操作（スマホ・タブレット用） ---
+  slider.addEventListener('touchstart', (e) => {
+    isDown = true;
+    startX = e.touches[0].pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  }, { passive: true });
+
+  slider.addEventListener('touchend', () => {
+    isDown = false;
+  });
+
+  slider.addEventListener('touchmove', (e) => {
+    if (!isDown) return;
+    const x = e.touches[0].pageX - slider.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    slider.scrollLeft = scrollLeft - walk;
+  }, { passive: true });
+}
 function setMode(mode) {
   state.mode = mode;
   elements.btnPvp.classList.toggle('active', mode === 'pvp');
