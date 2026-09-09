@@ -409,23 +409,6 @@ body {
   margin-bottom: 16px;
 }
 
-.skills-list {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-
-.skill-card-item {
-  flex: 1;
-  background: var(--card-bg);
-  border: 2px solid var(--border-color);
-  border-radius: 12px;
-  padding: 12px;
-  cursor: grab;
-  transition: transform 0.2s, border-color 0.2s;
-}
-
 .skill-card-item:hover {
   border-color: var(--accent-color);
   transform: translateY(-2px);
@@ -509,6 +492,24 @@ body {
   width: 90%;
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
+#skills-list {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+  user-select: none;
+}
 
+#skills-list:active {
+  cursor: grabbing;
+}
+
+.skill-card-item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  /* お好みのカードデザインに調整してください */
+}
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--text-main); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
