@@ -68,47 +68,7 @@ body {
   font-size: 0.95rem;
 }
 
-.mode-select h3 {
-  font-size: 0.95rem;
-  margin-bottom: 12px;
-  color: var(--text-sub);
-}
 
-.mode-btn {
-  width: 100%;
-  padding: 14px;
-  margin-bottom: 10px;
-  background-color: var(--card-bg);
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
-  color: var(--text-main);
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.2s;
-}
-
-.mode-btn.active {
-  border-color: var(--accent-color);
-  background-color: rgba(255, 215, 0, 0.1);
-  font-weight: bold;
-}
-
-.start-btn {
-  width: 100%;
-  padding: 16px;
-  background-color: var(--accent-color);
-  color: #111;
-  border: none;
-  border-radius: 10px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-}
 
 /* 対戦画面 */
 .game-header {
@@ -436,6 +396,127 @@ body {
 .hand-card.clickable:hover {
   transform: translateY(-4px);
   background-color: #343d4f;
+}
+
+
+
+
+/* タイトル画面を画面全体のオーバーレイに変更 */
+#screen-title {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* バックグラウンドで動く対戦盤面 */
+.bg-board-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.15); /* 少し大きく配置 */
+  opacity: 0.18; /* 薄く透けさせる */
+  filter: blur(1.5px); /* 軽くぼかしてスタイリッシュに */
+  pointer-events: none; /* 背景なのでクリック不可 */
+  z-index: 1;
+  transition: opacity 0.5s ease;
+}
+
+/* タイトルコンテンツ（枠を完全に撤去） */
+.title-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 500px;
+  padding: 2rem;
+  background: transparent; /* 背景カード枠を削除 */
+  border: none;
+  box-shadow: none;
+  backdrop-filter: blur(4px); /* タイトル文字の背景をほんのりボカして視認性アップ */
+}
+
+.title-content h1 {
+  font-size: 3.2rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 10px 30px rgba(0, 242, 254, 0.3);
+}
+
+.title-content .subtitle {
+  font-size: 1.1rem;
+  color: #a0aec0;
+  margin-bottom: 2.5rem;
+  letter-spacing: 1px;
+}
+
+.mode-select h3 {
+  font-size: 0.9rem;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 1rem;
+}
+
+/* モード選択ボタンのモダン化 */
+.mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 2rem;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #e2e8f0;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.mode-btn.active {
+  background: rgba(79, 172, 254, 0.15);
+  border-color: #4facfe;
+  color: #00f2fe;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+}
+
+/* スタートボタン */
+.start-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  color: #0f172a;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(0, 242, 254, 0.3);
+  transition: all 0.25s ease;
+}
+
+.start-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(0, 242, 254, 0.5);
 }
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--accent-color); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
