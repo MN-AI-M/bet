@@ -84,7 +84,7 @@ function initBgDemo() {
   bgDemoInterval = setInterval(stepBgDemo, 500);
 }
 function setupSkillDragAndDrop(cardEl, card, index) {
-  let cloneEl = null;
+  let cursorEl = null;
   let startX = 0;
   let startY = 0;
 
@@ -99,30 +99,35 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
 
-      if (!cloneEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        cloneEl = cardEl.cloneNode(true);
-        cloneEl.classList.add('skill-card-dragging');
-        document.body.appendChild(cloneEl);
+      // 少し動かしたらドラッグ開始
+      if (!cursorEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        // カードの代わりに「丸い白いポインター」を生成
+        cursorEl = document.createElement('div');
+        cursorEl.className = 'skill-drag-cursor';
+        document.body.appendChild(cursorEl);
+        
         cardEl.style.opacity = '0.4';
 
+        // ドラッグ開始時にモーダルを隠す
         if (elements.modalSkills) {
           elements.modalSkills.classList.remove('show');
           elements.modalSkills.classList.add('hidden');
         }
       }
 
-      if (cloneEl) {
-        cloneEl.style.left = `${moveEvent.clientX - 45}px`;
-        cloneEl.style.top = `${moveEvent.clientY - 65}px`;
+      if (cursorEl) {
+        // 丸いポインターを指/マウスの位置に追従させる
+        cursorEl.style.left = `${moveEvent.clientX}px`;
+        cursorEl.style.top = `${moveEvent.clientY}px`;
 
-        cloneEl.style.visibility = 'hidden';
+        // 下にあるセルを検出
         const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-        cloneEl.style.visibility = 'visible';
-
-        // ★修正：'.board-cell' ではなく '.cell' を探す
         const boardCell = targetElement ? targetElement.closest('.cell') : null;
 
+        // すべてのセルのハイライトをいったんリセット
         document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
+        
+        // 重なっているマスの色を変える
         if (boardCell) {
           boardCell.classList.add('drag-over');
         }
@@ -136,17 +141,18 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       cardEl.style.opacity = '1';
       document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
 
-      if (cloneEl) {
-        cloneEl.style.visibility = 'hidden';
+      if (cursorEl) {
+        // 離した瞬間の位置にあるセルを特定
         const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
         
-        cloneEl.remove();
-        cloneEl = null;
+        // 丸いポインターを削除
+        cursorEl.remove();
+        cursorEl = null;
 
-        // ★修正：'.board-cell' ではなく '.cell' を探す
         const boardCell = targetElement ? targetElement.closest('.cell') : null;
 
         if (boardCell) {
+          // 盤面のマスの上で離した場合：スキル発動
           const modal = document.getElementById('skill-modal');
           if (modal) modal.style.display = 'none';
 
@@ -154,6 +160,7 @@ function setupSkillDragAndDrop(cardEl, card, index) {
           executeSkill(card.id, boardCell);
           renderGame();
         } else {
+          // マス以外で離した場合：モーダルを元に戻す
           if (elements.modalSkills) {
             elements.modalSkills.classList.remove('hidden');
             requestAnimationFrame(() => {
@@ -168,7 +175,6 @@ function setupSkillDragAndDrop(cardEl, card, index) {
     cardEl.addEventListener('pointerup', onPointerUp);
   });
 }
-
 /**
  * スキル一覧を描画する際に関数を適用する箇所
  */
