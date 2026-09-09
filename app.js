@@ -19,7 +19,7 @@ const SKILLS = [
 const state = {
   mode: 'pvp',
   currentPlayer: 1,
-  phase: 'PLACE', // 'PLACE', 'ACTION', 'TARGET_SELECT'
+  phase: 'PLACE',
   board: [],
   hands: { 1: [], 2: [] }, 
   drawnCard: null,         
@@ -141,6 +141,7 @@ function stopBgDemo() {
 window.addEventListener('DOMContentLoaded', () => {
   init();
   initBgDemo();
+  initDraggableScroll();
 });
 
 function init() {
@@ -157,6 +158,39 @@ function init() {
   });
 }
 
+// マウスドラッグで横スクロール（スワイプ）できるようにする設定
+function initDraggableScroll() {
+  const slider = elements.skillsList;
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  slider.addEventListener('mousedown', (e) => {
+    isDown = true;
+    slider.classList.add('active');
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  });
+
+  slider.addEventListener('mouseleave', () => {
+    isDown = false;
+    slider.classList.remove('active');
+  });
+
+  slider.addEventListener('mouseup', () => {
+    isDown = false;
+    slider.classList.remove('active');
+  });
+
+  slider.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX) * 2; // スクロール速度調整
+    slider.scrollLeft = scrollLeft - walk;
+  });
+}
+
 function setMode(mode) {
   state.mode = mode;
   elements.btnPvp.classList.toggle('active', mode === 'pvp');
@@ -165,7 +199,7 @@ function setMode(mode) {
 
 function showTitleScreen() {
   elements.modalResult.classList.add('hidden');
-  elements.modalSkills.classList.remove('show'); // スライドダウンアニメーション用
+  elements.modalSkills.classList.remove('show');
   elements.modalSkills.classList.add('hidden');
   elements.modalGetCard.classList.add('hidden');
   elements.screenGame.classList.remove('active');
@@ -332,7 +366,6 @@ function openSkillModal() {
   currentHand.forEach((card, index) => {
     const cardEl = document.createElement('div');
     cardEl.className = 'skill-card-item';
-    // テキスト情報を極力シンプルに制限
     cardEl.innerHTML = `
       <div class="card-title">${card.name}</div>
       <div class="card-desc">${card.desc}</div>
@@ -346,7 +379,6 @@ function openSkillModal() {
     elements.skillsList.appendChild(cardEl);
   });
 
-  // 下からスライドアップして出現
   elements.modalSkills.classList.remove('hidden');
   requestAnimationFrame(() => {
     elements.modalSkills.classList.add('show');
@@ -358,7 +390,7 @@ function closeSkillModalSmooth(callback) {
   setTimeout(() => {
     elements.modalSkills.classList.add('hidden');
     if (callback) callback();
-  }, 300); // CSS側のトランジション時間と合わせる
+  }, 300);
 }
 
 function handleSkipAction() {
