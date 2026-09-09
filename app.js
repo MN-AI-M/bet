@@ -119,12 +119,10 @@ function setupSkillDragAndDrop(cardEl, card, index) {
         const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
         cloneEl.style.visibility = 'visible';
 
-        // デバッグ用：何に重なっているかコンソールに表示
-        console.log("Hovering over:", targetElement);
+        // ★修正：'.board-cell' ではなく '.cell' を探す
+        const boardCell = targetElement ? targetElement.closest('.cell') : null;
 
-        const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
-
-        document.querySelectorAll('.board-cell').forEach(cell => cell.classList.remove('drag-over'));
+        document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
         if (boardCell) {
           boardCell.classList.add('drag-over');
         }
@@ -136,22 +134,19 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       cardEl.removeEventListener('pointerup', onPointerUp);
 
       cardEl.style.opacity = '1';
-      document.querySelectorAll('.board-cell').forEach(cell => cell.classList.remove('drag-over'));
+      document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
 
       if (cloneEl) {
         cloneEl.style.visibility = 'hidden';
         const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
         
-        // デバッグ用：指を離した瞬間に何があるか表示
-        console.log("Dropped on:", targetElement);
-
         cloneEl.remove();
         cloneEl = null;
 
-        const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
+        // ★修正：'.board-cell' ではなく '.cell' を探す
+        const boardCell = targetElement ? targetElement.closest('.cell') : null;
 
         if (boardCell) {
-          console.log("Success! Board cell found:", boardCell);
           const modal = document.getElementById('skill-modal');
           if (modal) modal.style.display = 'none';
 
@@ -159,7 +154,6 @@ function setupSkillDragAndDrop(cardEl, card, index) {
           executeSkill(card.id, boardCell);
           renderGame();
         } else {
-          console.log("Failed: .board-cell could not be found from targetElement.");
           if (elements.modalSkills) {
             elements.modalSkills.classList.remove('hidden');
             requestAnimationFrame(() => {
