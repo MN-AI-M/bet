@@ -2,18 +2,18 @@ const BOARD_SIZE = 9;
 const WIN_COUNT = 5;
 
 const SKILLS = [
-  { id: 1, name: "ハズレ", desc: "何も起きない" },
-  { id: 2, name: "一手消去", desc: "相手の石1個消去" },
-  { id: 3, name: "視界潰し", desc: "相手の視界妨害" },
-  { id: 4, name: "一列消去", desc: "相手が並ぶ1列消去" },
-  { id: 5, name: "追加ターン", desc: "もう一度自分の番" },
-  { id: 6, name: "強制リセット", desc: "5%で相手石2個消去" },
-  { id: 7, name: "浸食", desc: "指定マスを自分の色に" },
-  { id: 8, name: "確約", desc: "指定マスに相手配置不可" },
-  { id: 9, name: "爆弾(5%)", desc: "3x3強制消去(5%)" },
-  { id: 10, name: "幻影", desc: "偽石を3個配置(3T)" },
-  { id: 11, name: "すり替え", desc: "相手の次カードをハズレに" },
-  { id: 12, name: "罠", desc: "見えない罠を設置" }
+  { id: 1, name: "ハズレ", desc: "何もなし" },
+  { id: 2, name: "一手消去", desc: "相手石1個消去" },
+  { id: 3, name: "視界潰し", desc: "視界を妨害" },
+  { id: 4, name: "一列消去", desc: "一列を消去" },
+  { id: 5, name: "追加ターン", desc: "もう一回" },
+  { id: 6, name: "強制リセット", desc: "5%で2個消去" },
+  { id: 7, name: "浸食", desc: "指定マスを自色に" },
+  { id: 8, name: "確約", desc: "相手配置不可に" },
+  { id: 9, name: "爆弾", desc: "5%で3x3消去" },
+  { id: 10, name: "幻影", desc: "偽石3個(3T)" },
+  { id: 11, name: "すり替え", desc: "次ドローをハズレに" },
+  { id: 12, name: "罠", desc: "罠を設置" }
 ];
 
 const state = {
@@ -42,7 +42,6 @@ const elements = {
   statusPhase: document.getElementById('status-phase'),
   p1Info: document.getElementById('p1-info'),
   p2Info: document.getElementById('p2-info'),
-  gameLog: document.getElementById('game-log'),
   modalResult: document.getElementById('modal-result'),
   resultTitle: document.getElementById('result-title'),
   resultMessage: document.getElementById('result-message'),
@@ -51,8 +50,7 @@ const elements = {
   getCardDesc: document.getElementById('get-card-desc'),
   modalSkills: document.getElementById('modal-skills'),
   skillsList: document.getElementById('skills-list'),
-  btnSkipSkill: document.getElementById('btn-skip-skill'),
-  dragProxy: document.getElementById('drag-proxy')
+  btnSkipSkill: document.getElementById('btn-skip-skill')
 };
 
 /* =======================================
@@ -153,7 +151,6 @@ function init() {
   document.getElementById('btn-restart').addEventListener('click', startGame);
   document.getElementById('btn-to-title').addEventListener('click', showTitleScreen);
 
-  // モーダル背景タップ等での閉じる処理・スキップ
   elements.modalGetCard.addEventListener('click', () => {
     elements.modalGetCard.classList.add('hidden');
     openSkillModal();
@@ -168,7 +165,7 @@ function setMode(mode) {
 
 function showTitleScreen() {
   elements.modalResult.classList.add('hidden');
-  elements.modalSkills.classList.add('hidden');
+  elements.modalSkills.classList.remove('show');
   elements.modalGetCard.classList.add('hidden');
   elements.screenGame.classList.remove('active');
   elements.screenTitle.classList.add('active');
@@ -197,9 +194,6 @@ function startGame() {
   state.overrideNextCard = {};
   state.phantomStones = [];
 
-  elements.gameLog.innerHTML = '';
-  addLog('ゲーム開始！5個並べたプレイヤーの勝ちです。');
-
   renderBoard();
   updateUI();
 }
@@ -226,7 +220,13 @@ function renderBoard() {
       if (cellData.promisedOwner) cell.classList.add('promised');
       if (cellData.trapOwner === state.currentPlayer) cell.classList.add('trap-visible');
 
+      // クリックおよびドラッグ/スワイプ代わりのタッチ操作対応
       cell.addEventListener('click', () => handleCellClick(r, c));
+      cell.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleCellClick(r, c);
+      }, { passive: false });
+
       elements.board.appendChild(cell);
     }
   }
@@ -236,7 +236,7 @@ function renderBoard() {
 function updateFogOverlay() {
   if (state.fogForPlayer === state.currentPlayer && state.fogArea) {
     const { r, c, size } = state.fogArea;
-    const cellSize = 42; // CSSのセルサイズに合わせる
+    const cellSize = 42; 
     elements.fogOverlay.style.top = `${r * cellSize + 20}px`;
     elements.fogOverlay.style.left = `${c * cellSize + 20}px`;
     elements.fogOverlay.style.width = `${size * cellSize - 4}px`;
@@ -248,24 +248,17 @@ function updateFogOverlay() {
 }
 
 function updateUI() {
-  elements.statusTurn.textContent = `Player ${state.currentPlayer} の番`;
+  elements.statusTurn.textContent = `P ${state.currentPlayer}`;
   elements.p1Info.classList.toggle('active', state.currentPlayer === 1);
   elements.p2Info.classList.toggle('active', state.currentPlayer === 2);
 
   if (state.phase === 'PLACE') {
-    elements.statusPhase.textContent = '1. マスを選んで石を置いてください';
+    elements.statusPhase.textContent = 'STONE PLACE';
   } else if (state.phase === 'ACTION') {
-    elements.statusPhase.textContent = '2. スキルを使用・確認してください';
+    elements.statusPhase.textContent = 'SKILL SELECT';
   } else if (state.phase === 'TARGET_SELECT') {
-    elements.statusPhase.textContent = '対象のマスを選択してください';
+    elements.statusPhase.textContent = 'SELECT TARGET';
   }
-}
-
-function addLog(text) {
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
-  entry.textContent = text;
-  elements.gameLog.prepend(entry);
 }
 
 function handleCellClick(r, c) {
@@ -279,29 +272,21 @@ function handleCellClick(r, c) {
 function placeStone(r, c) {
   const cell = state.board[r][c];
 
-  if (cell.owner !== 0 && !cell.isPhantom) {
-    addLog('そこには既に石が存在します。');
-    return;
-  }
-  if (cell.promisedOwner !== 0 && cell.promisedOwner !== state.currentPlayer) {
-    addLog('相手の確約マスのため配置できません！');
-    return;
-  }
+  if (cell.owner !== 0 && !cell.isPhantom) return;
+  if (cell.promisedOwner !== 0 && cell.promisedOwner !== state.currentPlayer) return;
 
   cell.owner = state.currentPlayer;
   cell.isPhantom = false;
-  addLog(`P${state.currentPlayer} が (${r + 1}, ${c + 1}) に石を配置。`);
 
   if (cell.trapOwner !== 0 && cell.trapOwner !== state.currentPlayer) {
     cell.owner = 0;
     cell.trapOwner = 0;
-    addLog(`💥 罠発動！ (${r + 1}, ${c + 1}) の石は消滅しました！`);
   }
 
   renderBoard();
 
   if (checkWin(state.currentPlayer)) {
-    endGame(`Player ${state.currentPlayer} の勝利！`);
+    endGame(`PLAYER ${state.currentPlayer} WINS`);
     return;
   }
 
@@ -315,7 +300,6 @@ function actionPhase() {
   if (state.mode === 'pve' && state.currentPlayer === 2) {
     setTimeout(() => botDecideAction(), 600);
   } else {
-    // ターン開始時に自動でカードを1枚引いて通知モーダルを表示する
     handleDrawCard();
   }
 }
@@ -326,10 +310,8 @@ function handleDrawCard() {
     const cardId = state.overrideNextCard[state.currentPlayer];
     drawn = SKILLS.find(s => s.id === cardId);
     delete state.overrideNextCard[state.currentPlayer];
-    addLog(`すり替え効果で「${drawn.name}」を引かされました！`);
   } else {
     drawn = SKILLS[Math.floor(Math.random() * SKILLS.length)];
-    addLog(`P${state.currentPlayer} はカードを引き「${drawn.name}」を手に入れた。`);
   }
 
   state.drawnCard = drawn;
@@ -337,7 +319,6 @@ function handleDrawCard() {
     state.hands[state.currentPlayer].push(drawn);
   }
 
-  // 獲得カード通知モーダルの表示
   elements.getCardTitle.textContent = drawn.name;
   elements.getCardDesc.textContent = drawn.desc;
   elements.modalGetCard.classList.remove('hidden');
@@ -357,40 +338,39 @@ function openSkillModal() {
     const cardEl = document.createElement('div');
     cardEl.className = 'skill-card-item';
     cardEl.innerHTML = `
-      <div class="card-id">技 ${card.id}</div>
+      <div class="card-id">#${card.id}</div>
       <div class="card-title">${card.name}</div>
       <div class="card-desc">${card.desc}</div>
     `;
     cardEl.addEventListener('click', () => {
-      elements.modalSkills.classList.add('hidden');
-      state.hands[state.currentPlayer].splice(index, 1);
-      addLog(`P${state.currentPlayer} は「${card.name}」を発動！`);
-      executeSkill(card.id);
+      closeSkillModalWithAnim(() => {
+        state.hands[state.currentPlayer].splice(index, 1);
+        executeSkill(card.id);
+      });
     });
     elements.skillsList.appendChild(cardEl);
   });
 
-  elements.modalSkills.classList.remove('hidden');
+  // 下からスライドイン表示
+  elements.modalSkills.classList.add('show');
+}
+
+function closeSkillModalWithAnim(callback) {
+  elements.modalSkills.classList.remove('show');
+  setTimeout(() => {
+    if (callback) callback();
+  }, 300); // CSSのtransition時間と合わせる
 }
 
 function handleSkipAction() {
-  elements.modalSkills.classList.add('hidden');
-  elements.modalGetCard.classList.add('hidden');
-  addLog(`P${state.currentPlayer} はスキルを使用しませんでした。`);
-  endTurn();
-}
-
-function cancelTargetSelection() {
-  state.phase = 'ACTION';
-  state.targetCallback = null;
-  const cells = elements.board.querySelectorAll('.cell');
-  cells.forEach(cell => cell.classList.remove('target-selectable'));
-  updateUI();
-  openSkillModal();
+  closeSkillModalWithAnim(() => {
+    elements.modalGetCard.classList.add('hidden');
+    endTurn();
+  });
 }
 
 function endTurn() {
-  elements.modalSkills.classList.add('hidden');
+  closeSkillModalWithAnim();
   elements.modalGetCard.classList.add('hidden');
 
   state.phantomStones = state.phantomStones.filter(p => {
@@ -399,7 +379,6 @@ function endTurn() {
       if (state.board[p.r][p.c].isPhantom) {
         state.board[p.r][p.c].owner = 0;
         state.board[p.r][p.c].isPhantom = false;
-        addLog(`(${p.r + 1}, ${p.c + 1}) の幻影が消滅しました。`);
       }
       return false;
     }
@@ -409,7 +388,6 @@ function endTurn() {
   if (state.fogForPlayer === state.currentPlayer) {
     state.fogForPlayer = null;
     state.fogArea = null;
-    addLog(`P${state.currentPlayer} の視界妨害が晴れた！`);
   }
 
   state.currentPlayer = state.currentPlayer === 1 ? 2 : 1;
@@ -432,18 +410,14 @@ function executeSkill(skillId) {
 
   switch (skillId) {
     case 1:
-      addLog(`ハズレ... 何も起こりません。`);
       endTurn();
       break;
     case 2:
-      startTargetSelection('相手の石を選んでください', (r, c) => {
+      startTargetSelection('SELECT ENEMY STONE', (r, c) => {
         if (state.board[r][c].owner === targetOpponent) {
           state.board[r][c].owner = 0;
-          addLog(`(${r + 1}, ${c + 1}) の相手の石を消去！`);
           renderBoard();
           endTurn();
-        } else {
-          addLog('相手の石を選択してください。');
         }
       }, c => c.owner === targetOpponent);
       break;
@@ -452,28 +426,22 @@ function executeSkill(skillId) {
       const tc = Math.floor(Math.random() * (BOARD_SIZE - 2));
       state.fogForPlayer = targetOpponent;
       state.fogArea = { r: tr, c: tc, size: 3 };
-      addLog(`相手の視界の一部を奪いました！`);
       endTurn();
       break;
     case 4:
-      startTargetSelection('相手の石を選んでください（その行または列を消去）', (r, c) => {
+      startTargetSelection('SELECT LINE TARGET', (r, c) => {
         if (state.board[r][c].owner === targetOpponent) {
           const isRow = Math.random() < 0.5;
-          let count = 0;
           for (let i = 0; i < BOARD_SIZE; i++) {
-            if (isRow && state.board[r][i].owner === targetOpponent) { state.board[r][i].owner = 0; count++; }
-            if (!isRow && state.board[i][c].owner === targetOpponent) { state.board[i][c].owner = 0; count++; }
+            if (isRow && state.board[r][i].owner === targetOpponent) state.board[r][i].owner = 0;
+            if (!isRow && state.board[i][c].owner === targetOpponent) state.board[i][c].owner = 0;
           }
-          addLog(`${isRow ? '行' : '列'}を消去！相手の石が ${count} 個消えた！`);
           renderBoard();
           endTurn();
-        } else {
-          addLog('相手の石を選択してください。');
         }
       }, c => c.owner === targetOpponent);
       break;
     case 5:
-      addLog(`追加ターン！もう一度自分の番です。`);
       state.phase = 'PLACE';
       renderBoard(); 
       updateUI();
@@ -492,51 +460,39 @@ function executeSkill(skillId) {
             removed++;
           }
         }
-        addLog(`強制リセット成功(5%)！相手の石を ${removed} 個消去！`);
-      } else {
-        addLog(`強制リセット失敗... 何も起こらない。`);
       }
       renderBoard();
       endTurn();
       break;
     case 7:
-      startTargetSelection('色を変えるマスを選んでください', (r, c) => {
+      startTargetSelection('SELECT CELL', (r, c) => {
         state.board[r][c].owner = state.currentPlayer;
         state.board[r][c].isPhantom = false;
-        addLog(`(${r + 1}, ${c + 1}) を自色に浸食！`);
         renderBoard();
-        if (checkWin(state.currentPlayer)) endGame(`Player ${state.currentPlayer} の勝利！`);
+        if (checkWin(state.currentPlayer)) endGame(`PLAYER ${state.currentPlayer} WINS`);
         else endTurn();
       });
       break;
     case 8:
-      startTargetSelection('確約する空きマスを選んでください', (r, c) => {
+      startTargetSelection('SELECT EMPTY CELL', (r, c) => {
         if (state.board[r][c].owner === 0) {
           state.board[r][c].promisedOwner = state.currentPlayer;
-          addLog(`(${r + 1}, ${c + 1}) に相手は置けなくなりました！`);
           renderBoard();
           endTurn();
-        } else {
-          addLog('空いているマスを選んでください。');
         }
       }, c => c.owner === 0);
       break;
     case 9:
-      startTargetSelection('爆弾を落とす中心マスを選んでください', (r, c) => {
+      startTargetSelection('SELECT BOMB CENTER', (r, c) => {
         if (Math.random() < 0.05) {
-          let count = 0;
           for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
               let nr = r + dr, nc = c + dc;
               if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && state.board[nr][nc].owner !== 0) {
                 state.board[nr][nc].owner = 0;
-                count++;
               }
             }
           }
-          addLog(`💥 爆弾成功(5%)！ 3x3の範囲から ${count} 個の石を吹き飛ばした！`);
-        } else {
-          addLog(`不発... 爆弾は作動しなかった(95%)。`);
         }
         renderBoard();
         endTurn();
@@ -554,24 +510,19 @@ function executeSkill(skillId) {
           phantoms++;
         }
       }
-      addLog(`幻影の石を ${phantoms} 個配置しました(3ターンで消滅)。`);
       renderBoard();
       endTurn();
       break;
     case 11:
       state.overrideNextCard[targetOpponent] = 1;
-      addLog(`相手の次回のドローを「ハズレ」にすり替えた！`);
       endTurn();
       break;
     case 12:
-      startTargetSelection('罠を仕掛ける空きマスを選んでください', (r, c) => {
+      startTargetSelection('SET TRAP', (r, c) => {
         if (state.board[r][c].owner === 0) {
           state.board[r][c].trapOwner = state.currentPlayer;
-          addLog(`(${r + 1}, ${c + 1}) に罠を仕掛けました！`);
           renderBoard();
           endTurn();
-        } else {
-          addLog('空いているマスを選んでください。');
         }
       }, c => c.owner === 0);
       break;
@@ -805,7 +756,6 @@ function botDecideAction() {
   if (useIndex !== -1) {
     const card = hand[useIndex];
     state.hands[2].splice(useIndex, 1);
-    addLog(`P2 は「${card.name}」を発動！`);
     
     setTimeout(() => {
       const needsTarget = [2, 4, 7, 8, 9, 12].includes(card.id);
@@ -817,7 +767,6 @@ function botDecideAction() {
               const target = cells[Math.floor(Math.random() * cells.length)];
               state.targetCallback(parseInt(target.dataset.row), parseInt(target.dataset.col));
             } else {
-              cancelTargetSelection();
               endTurn();
             }
         }, 300);
@@ -826,7 +775,6 @@ function botDecideAction() {
       }
     }, 400);
   } else {
-    addLog(`P2 は何もしませんでした。`);
     endTurn();
   }
 }
