@@ -1,19 +1,25 @@
+/* =======================================
+   デザインシステム・変数定義
+======================================= */
 :root {
-  --bg-color: #161920;
-  --panel-bg: #212631;
-  --card-bg: #2c3241;
+  --bg-color: #0b0f19;
+  --panel-bg: #161b26;
+  --card-bg: #212836;
   --text-main: #f0f2f5;
-  --text-sub: #9ea8b6;
-  --border-color: #373e4f;
+  --text-sub: #8a99ad;
+  --border-color: #2e3646;
 
   --p1-color: #ff5252;
   --p2-color: #448aff;
-  --accent-color: #ffd700;
+  --accent-color: #00f2fe;
 
   --board-grid-size: 9;
   --cell-size: 52px;
 }
 
+/* =======================================
+   ベースリセット
+======================================= */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -22,15 +28,17 @@
 }
 
 body {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-main);
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
+/* 共通スクリーンスタイル */
 .screen {
   display: none;
   width: 100%;
@@ -44,33 +52,129 @@ body {
   align-items: center;
 }
 
-/* タイトル画面 */
-.title-container {
-  background-color: var(--panel-bg);
-  padding: 40px;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
+.hidden {
+  display: none !important;
+}
+
+/* =======================================
+   タイトル画面 (極薄・大迫力バックグラウンド)
+======================================= */
+#screen-title {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  padding: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--bg-color);
+}
+
+#screen-title.active {
+  display: flex;
+}
+
+/* 背景で大きくダイナミックに動くBot vs Bot盤面 */
+.bg-board-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.65); /* 大幅に拡大 */
+  opacity: 0.16;
+  filter: blur(1px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bg-board-container .board {
+  gap: 6px;
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+}
+
+/* タイトルコンテンツ（余計なテキスト・枠線を完全排除） */
+.title-content {
+  position: relative;
+  z-index: 10;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   width: 100%;
-  max-width: 440px;
+  max-width: 320px;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
-.title-container h1 {
-  font-size: 2.2rem;
-  color: var(--accent-color);
-  margin-bottom: 8px;
+.title-content h1 {
+  font-size: 3.6rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2.5rem;
+  text-shadow: 0 0 40px rgba(0, 242, 254, 0.4);
 }
 
-.subtitle {
+/* モード選択（横並びで超シンプル） */
+.mode-select {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
   color: var(--text-sub);
-  margin-bottom: 30px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
 
+.mode-btn.active {
+  background: rgba(0, 242, 254, 0.1);
+  border-color: #00f2fe;
+  color: #00f2fe;
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
+}
 
-/* 対戦画面 */
+/* スタートボタン */
+.start-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  color: #0b0f19;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(0, 242, 254, 0.35);
+  transition: all 0.25s ease;
+}
+
+.start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 242, 254, 0.5);
+}
+
+/* =======================================
+   対戦メイン画面
+======================================= */
 .game-header {
   display: flex;
   justify-content: space-between;
@@ -104,6 +208,7 @@ body {
 
 .game-status { text-align: center; }
 #status-turn { font-size: 1.1rem; font-weight: bold; margin-bottom: 4px; }
+
 .phase-badge {
   font-size: 0.85rem;
   background-color: var(--accent-color);
@@ -149,12 +254,14 @@ body {
   font-weight: bold;
   cursor: pointer;
   position: relative;
+  transition: background-color 0.2s;
 }
 
 .cell:hover { background-color: #272f3f; }
 .cell.p1 { color: var(--p1-color); }
 .cell.p2 { color: var(--p2-color); }
 .cell.phantom { opacity: 0.4; }
+
 .cell.promised::after {
   content: "🔒";
   font-size: 0.75rem;
@@ -162,6 +269,7 @@ body {
   top: 2px;
   right: 2px;
 }
+
 .cell.trap-visible::before {
   content: "💣";
   font-size: 0.75rem;
@@ -169,6 +277,7 @@ body {
   bottom: 2px;
   left: 2px;
 }
+
 .cell.target-selectable {
   animation: pulse 0.8s infinite alternate;
   border: 2px solid var(--accent-color);
@@ -176,11 +285,11 @@ body {
 }
 
 @keyframes pulse {
-  0% { background-color: rgba(255, 215, 0, 0.1); }
-  100% { background-color: rgba(255, 215, 0, 0.4); }
+  0% { background-color: rgba(0, 242, 254, 0.1); }
+  100% { background-color: rgba(0, 242, 254, 0.35); }
 }
 
-/* 視界潰し */
+/* 視界妨害 */
 .fog-overlay {
   position: absolute;
   background-color: rgba(10, 10, 15, 0.96);
@@ -196,9 +305,9 @@ body {
 }
 .fog-overlay::after { content: "視界妨害エリア"; }
 
-.hidden { display: none !important; }
-
-/* サイドパネル */
+/* =======================================
+   サイドパネル・カード・ログ
+======================================= */
 .side-panel {
   display: flex;
   flex-direction: column;
@@ -219,104 +328,6 @@ body {
   margin-bottom: 12px;
 }
 
-.card-display {
-  background-color: var(--card-bg);
-  border: 2px solid var(--accent-color);
-  border-radius: 10px;
-  padding: 16px;
-  min-height: 110px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-.card-display.empty {
-  border-color: var(--border-color);
-  color: var(--text-sub);
-}
-
-.card-inner .card-id {
-  display: inline-block;
-  background-color: var(--accent-color);
-  color: #111;
-  font-weight: bold;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  margin-bottom: 6px;
-}
-
-.card-inner .card-title {
-  font-size: 1.1rem;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.card-inner .card-desc {
-  font-size: 0.85rem;
-  color: var(--text-sub);
-}
-
-.skill-actions { display: flex; flex-direction: column; gap: 8px; }
-
-.action-btn {
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.action-btn.primary { background-color: var(--accent-color); color: #111; }
-.action-btn.secondary { background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); }
-.action-btn.cancel { background-color: #ff5252; color: white; margin-top: 8px; width: 100%; }
-
-.target-prompt { font-size: 0.85rem; color: var(--accent-color); text-align: center; }
-
-.game-log {
-  height: 180px;
-  overflow-y: auto;
-  font-size: 0.85rem;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.log-entry {
-  padding: 6px 10px;
-  border-radius: 4px;
-  background-color: rgba(0,0,0,0.2);
-}
-
-/* モーダル */
-.modal {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: var(--panel-bg);
-  padding: 32px;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-  text-align: center;
-  max-width: 380px;
-  width: 90%;
-}
-
-
-
-
-
-/* ---- 手札・ストック周りのデザイン ---- */
 .hand-cards {
   display: flex;
   gap: 8px;
@@ -341,7 +352,17 @@ body {
 .hand-card:hover:not(.disabled) {
   border-color: var(--accent-color);
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 242, 254, 0.2);
+}
+
+.hand-card.clickable {
+  border-color: #4caf50;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.hand-card.clickable:hover {
+  transform: translateY(-4px);
+  background-color: #2c3547;
 }
 
 .hand-card.disabled {
@@ -380,7 +401,7 @@ body {
   border-radius: 8px;
 }
 
-/* 追加・上書きするスタイル */
+/* アクションエリア */
 .action-prompt {
   font-size: 0.85rem;
   color: var(--accent-color);
@@ -389,135 +410,66 @@ body {
   font-weight: bold;
 }
 
-.hand-card.clickable {
-  border-color: #4caf50;
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
-}
-.hand-card.clickable:hover {
-  transform: translateY(-4px);
-  background-color: #343d4f;
-}
+.skill-actions { display: flex; flex-direction: column; gap: 8px; }
 
-
-
-
-/* タイトル画面を画面全体のオーバーレイに変更 */
-#screen-title {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-/* バックグラウンドで動く対戦盤面 */
-.bg-board-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(1.15); /* 少し大きく配置 */
-  opacity: 0.18; /* 薄く透けさせる */
-  filter: blur(1.5px); /* 軽くぼかしてスタイリッシュに */
-  pointer-events: none; /* 背景なのでクリック不可 */
-  z-index: 1;
-  transition: opacity 0.5s ease;
-}
-
-/* タイトルコンテンツ（枠を完全に撤去） */
-.title-content {
-  position: relative;
-  z-index: 10;
-  text-align: center;
-  max-width: 500px;
-  padding: 2rem;
-  background: transparent; /* 背景カード枠を削除 */
+.action-btn {
+  padding: 12px;
   border: none;
-  box-shadow: none;
-  backdrop-filter: blur(4px); /* タイトル文字の背景をほんのりボカして視認性アップ */
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
-.title-content h1 {
-  font-size: 3.2rem;
-  font-weight: 900;
-  letter-spacing: 2px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
-  text-shadow: 0 10px 30px rgba(0, 242, 254, 0.3);
-}
+.action-btn:active { transform: scale(0.98); }
+.action-btn.primary { background-color: var(--accent-color); color: #111; }
+.action-btn.secondary { background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); }
+.action-btn.cancel { background-color: #ff5252; color: white; margin-top: 8px; width: 100%; }
 
-.title-content .subtitle {
-  font-size: 1.1rem;
-  color: #a0aec0;
-  margin-bottom: 2.5rem;
-  letter-spacing: 1px;
-}
+.target-prompt { font-size: 0.85rem; color: var(--accent-color); text-align: center; }
 
-.mode-select h3 {
-  font-size: 0.9rem;
-  color: #718096;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 1rem;
-}
-
-/* モード選択ボタンのモダン化 */
-.mode-select {
+/* ログエリア */
+.game-log {
+  height: 180px;
+  overflow-y: auto;
+  font-size: 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 2rem;
+  gap: 6px;
 }
 
-.mode-btn {
+.log-entry {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background-color: rgba(0,0,0,0.2);
+}
+
+/* =======================================
+   リザルトモーダル
+======================================= */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 14px 24px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: #e2e8f0;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.25s ease;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
-.mode-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
+.modal-content {
+  background-color: var(--panel-bg);
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
 }
 
-.mode-btn.active {
-  background: rgba(79, 172, 254, 0.15);
-  border-color: #4facfe;
-  color: #00f2fe;
-  box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
-}
-
-/* スタートボタン */
-.start-btn {
-  width: 100%;
-  padding: 16px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-  color: #0f172a;
-  cursor: pointer;
-  box-shadow: 0 10px 25px rgba(0, 242, 254, 0.3);
-  transition: all 0.25s ease;
-}
-
-.start-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 35px rgba(0, 242, 254, 0.5);
-}
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--accent-color); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
 .modal-content button { width: 100%; margin-bottom: 8px; }
