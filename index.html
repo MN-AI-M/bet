@@ -7,9 +7,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- タイトル画面 -->
   <div id="screen-title" class="screen active">
-    <div class="title-container">
-      <h1>9x9 スキルまる罰</h1>
+    <!-- バックグラウンドで薄く動くBot vs Bot盤面 -->
+    <div class="bg-board-container">
+      <div id="bg-board" class="board"></div>
+    </div>
+
+    <!-- 枠を外したメインタイトルコンテンツ -->
+    <div class="title-content">
+      <h1>9x9 SKILL TAC</h1>
       <p class="subtitle">5連で勝利 × 12の逆転スキル</p>
       
       <div class="mode-select">
@@ -26,6 +33,7 @@
     </div>
   </div>
 
+  <!-- ゲーム画面 -->
   <div id="screen-game" class="screen">
     <header class="game-header">
       <div class="player-info player-1 active" id="p1-info">
@@ -53,7 +61,6 @@
           
           <div id="skill-actions" class="skill-actions hidden">
             <div class="action-prompt">2. アクションを選択</div>
-            <!-- カードを引くか、技を使わず終わるボタン -->
             <button id="btn-draw-card" class="action-btn primary">カードを引いてターン終了</button>
             <button id="btn-skip-action" class="action-btn secondary hidden">何もしない (ターン終了)</button>
           </div>
@@ -72,6 +79,7 @@
     </main>
   </div>
 
+  <!-- リザルトモーダル -->
   <div id="modal-result" class="modal hidden">
     <div class="modal-content">
       <h2 id="result-title">GAME OVER</h2>
