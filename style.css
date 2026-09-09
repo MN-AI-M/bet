@@ -419,6 +419,24 @@ body {
   background-color: rgba(0,0,0,0.1);
   border-radius: 8px;
 }
+
+/* 追加・上書きするスタイル */
+.action-prompt {
+  font-size: 0.85rem;
+  color: var(--accent-color);
+  margin-bottom: 4px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.hand-card.clickable {
+  border-color: #4caf50;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+.hand-card.clickable:hover {
+  transform: translateY(-4px);
+  background-color: #343d4f;
+}
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--accent-color); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
 .modal-content button { width: 100%; margin-bottom: 8px; }
