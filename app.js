@@ -53,6 +53,7 @@ const elements = {
   resultTitle: document.getElementById('result-title'),
   resultMessage: document.getElementById('result-message')
 };
+
 /* =======================================
    背景デモ対戦 (Bot vs Bot) ロジック
 ======================================= */
@@ -139,25 +140,16 @@ function stopBgDemo() {
   }
 }
 
-// 画面遷移との連動
-function showTitleScreen() {
-  elements.modalResult.classList.add('hidden');
-  elements.screenGame.classList.remove('active');
-  elements.screenTitle.classList.add('active');
-  initBgDemo(); // タイトルに戻ったらデモ再生開始
-}
-
-const originalStartGame = startGame;
-startGame = function() {
-  stopBgDemo(); // ゲーム開始時に背景デモを停止
-  originalStartGame();
-};
+/* =======================================
+   メインゲーム ロジック
+======================================= */
 
 // 起動時に背景デモを開始
 window.addEventListener('DOMContentLoaded', () => {
   init();
   initBgDemo();
 });
+
 function init() {
   elements.btnPvp.addEventListener('click', () => setMode('pvp'));
   elements.btnPve.addEventListener('click', () => setMode('pve'));
@@ -179,9 +171,12 @@ function showTitleScreen() {
   elements.modalResult.classList.add('hidden');
   elements.screenGame.classList.remove('active');
   elements.screenTitle.classList.add('active');
+  initBgDemo(); // タイトルに戻ったらデモ再生開始
 }
 
 function startGame() {
+  stopBgDemo(); // ゲーム開始時に背景デモを停止
+
   elements.screenTitle.classList.remove('active');
   elements.modalResult.classList.add('hidden');
   elements.screenGame.classList.add('active');
@@ -332,7 +327,7 @@ function placeStone(r, c) {
 
   cell.owner = state.currentPlayer;
   cell.isPhantom = false;
-  addLog(`P${state.currentPlayer} が (${r + 1}, ${c + 1}) に石を配置。`);
+  addLog(`P${state.currentPlayer} が (${r + 1}, c + 1) に石を配置。`); // 表示上は1-index
 
   if (cell.trapOwner !== 0 && cell.trapOwner !== state.currentPlayer) {
     cell.owner = 0;
@@ -439,7 +434,9 @@ function endTurn() {
   }
 }
 
-/* スキル処理 */
+/* =======================================
+   スキル処理
+======================================= */
 function executeSkill(skillId) {
   const targetOpponent = state.currentPlayer === 1 ? 2 : 1;
 
@@ -854,5 +851,3 @@ function botDecideAction() {
     handleDrawCard();
   }
 }
-
-init();
