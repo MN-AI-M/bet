@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>9x9 スキルまる罰ゲーム</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 初めの画面（タイトル画面） -->
+  <div id="screen-title" class="screen active">
+    <div class="title-container">
+      <h1>9x9 スキルまる罰</h1>
+      <p class="subtitle">5連で勝利 × 12の逆転スキル</p>
+      
+      <div class="mode-select">
+        <h3>対戦モードを選択</h3>
+        <button id="btn-pvp" class="mode-btn active" data-mode="pvp">
+          <span class="icon">👥</span>
+          <span class="text">2人プレイ (ローカル)</span>
+        </button>
+        <button id="btn-pve" class="mode-btn" data-mode="pve">
+          <span class="icon">🤖</span>
+          <span class="text">1人プレイ (vs ガチBot)</span>
+        </button>
+      </div>
+
+      <button id="btn-start" class="start-btn">ゲーム開始</button>
+    </div>
+  </div>
+
+  <!-- 対戦画面 -->
+  <div id="screen-game" class="screen">
+    <!-- ヘッダー・ステータス表示 -->
+    <header class="game-header">
+      <div class="player-info player-1 active" id="p1-info">
+        <span class="p-symbol">〇</span>
+        <span class="p-name">Player 1</span>
+      </div>
+      <div class="game-status">
+        <div id="status-turn">Player 1 の番</div>
+        <div id="status-phase" class="phase-badge">1. 石を置いてください</div>
+      </div>
+      <div class="player-info player-2" id="p2-info">
+        <span class="p-symbol">✕</span>
+        <span class="p-name">Player 2</span>
+      </div>
+    </header>
+
+    <!-- メイン対戦エリア -->
+    <main class="game-main">
+      <!-- 9x9 盤面 -->
+      <div class="board-container">
+        <div id="board" class="board"></div>
+        <!-- 視界潰し（モザイク）オーバーレイ -->
+        <div id="fog-overlay" class="fog-overlay hidden"></div>
+      </div>
+
+      <!-- サイドパネル -->
+      <aside class="side-panel">
+        <!-- スキルカードエリア -->
+        <div class="card-section">
+          <h3>引いたスキルカード</h3>
+          <div id="card-display" class="card-display empty">
+            <div class="card-inner">
+              <span class="card-id">?</span>
+              <div class="card-title">石を置くとカードが引かれます</div>
+              <div class="card-desc">-</div>
+            </div>
+          </div>
+          
+          <div id="skill-actions" class="skill-actions hidden">
+            <button id="btn-use-skill" class="action-btn primary">技を使う</button>
+            <button id="btn-skip-skill" class="action-btn secondary">使わない (ターン終了)</button>
+          </div>
+          <div id="target-prompt" class="target-prompt hidden">
+            <span>対象のマスを盤面からクリックしてください</span>
+            <button id="btn-cancel-target" class="action-btn cancel">キャンセル</button>
+          </div>
+        </div>
+
+        <!-- 対戦ログ -->
+        <div class="log-section">
+          <h3>対戦ログ</h3>
+          <div id="game-log" class="game-log"></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- 勝敗結果モーダル -->
+  <div id="modal-result" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="result-title">GAME OVER</h2>
+      <p id="result-message">Player 1 の勝利です！</p>
+      <button id="btn-restart" class="action-btn primary">もう一度遊ぶ</button>
+      <button id="btn-to-title" class="action-btn secondary">タイトルへ戻る</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
