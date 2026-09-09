@@ -83,7 +83,107 @@ function initBgDemo() {
   if (bgDemoInterval) clearInterval(bgDemoInterval);
   bgDemoInterval = setInterval(stepBgDemo, 500);
 }
+function setupSkillDragAndDrop(cardEl, card, index) {
+  let cloneEl = null;
+  let startX = 0;
+  let startY = 0;
 
+  cardEl.addEventListener('pointerdown', (e) => {
+    // 左クリックまたはタッチ以外は除外
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    // ドラッグ開始判定を少しの移動量で行うため、ここでは一時保持
+    const onPointerMove = (moveEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+
+      // ある程度動かしたら「ドラッグ開始」とみなす
+      if (!cloneEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        // 追従用クローン要素の作成
+        cloneEl = cardEl.cloneNode(true);
+        cloneEl.classList.add('skill-card-dragging');
+        document.body.appendChild(cloneEl);
+
+        // 元のカードを半透明にする
+        cardEl.style.opacity = '0.4';
+        
+        // モーダルを閉じる（ドラッグ中は邪魔になるためスムーズに消す）
+        // ※必要に応じてモーダル維持のままにすることも可能です
+      }
+
+      if (cloneEl) {
+        // クローンをカーソル/指の位置に追従させる
+        cloneEl.style.left = `${moveEvent.clientX - 45}px`;
+        cloneEl.style.top = `${moveEvent.clientY - 65}px`;
+
+        // 盤面上のセルに乗っているか判定
+        const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
+
+        // すべてのセルのハイライトをいったんリセット
+        document.querySelectorAll('.board-cell').forEach(cell => cell.classList.remove('drag-over'));
+        
+        // 乗り上げているセルをハイライト
+        if (boardCell) {
+          boardCell.classList.add('drag-over');
+        }
+      }
+    };
+
+    const onPointerUp = (upEvent) => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+
+      cardEl.style.opacity = '1';
+
+      if (cloneEl) {
+        // ドロップ位置にある要素を取得
+        const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
+        const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
+
+        // ハイライトを消去
+        document.querySelectorAll('.board-cell').forEach(cell => cell.classList.remove('drag-over'));
+        cloneEl.remove();
+        cloneEl = null;
+
+        // 盤面にドロップされた場合の処理
+        if (boardCell) {
+          closeSkillModalSmooth(() => {
+            // 手札から削除してスキル発動
+            state.hands[state.currentPlayer].splice(index, 1);
+            executeSkill(card.id, boardCell); // どのセルに置いたかも渡せるように拡張
+            renderGame();
+          });
+        }
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  });
+}
+
+/**
+ * スキル一覧を描画する際に関数を適用する箇所
+ */
+function renderSkillList() {
+  const listEl = document.getElementById('skills-list');
+  listEl.innerHTML = '';
+
+  state.hands[state.currentPlayer].forEach((card, index) => {
+    const cardEl = document.createElement('div');
+    cardEl.className = 'skill-card-item';
+    cardEl.innerHTML = `<span>${card.name}</span>`; // カードの中身
+
+    // ドラッグ＆ドロップ機能をバインド
+    setupSkillDragAndDrop(cardEl, card, index);
+
+    listEl.appendChild(cardEl);
+  });
+}
 function renderBgBoard() {
   const bgBoardEl = document.getElementById('bg-board');
   if (!bgBoardEl) return;
