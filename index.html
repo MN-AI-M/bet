@@ -3,33 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>9x9 スキルまる罰ゲーム</title>
+  <title>9x9 SKILL TAC</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- タイトル画面 -->
   <div id="screen-title" class="screen active">
-    <!-- バックグラウンドで薄く動くBot vs Bot盤面 -->
+    <!-- バックグラウンドで大きく動くBot vs Bot盤面 -->
     <div class="bg-board-container">
       <div id="bg-board" class="board"></div>
     </div>
 
-    <!-- 枠を外したメインタイトルコンテンツ -->
+    <!-- ミニマルなタイトルコンテンツ -->
     <div class="title-content">
       <h1>9x9 SKILL TAC</h1>
-      <p class="subtitle">5連で勝利 × 12の逆転スキル</p>
       
       <div class="mode-select">
-        <h3>対戦モードを選択</h3>
-        <button id="btn-pvp" class="mode-btn active" data-mode="pvp">
-          <span class="icon">👥</span><span class="text">2人プレイ (ローカル)</span>
-        </button>
-        <button id="btn-pve" class="mode-btn" data-mode="pve">
-          <span class="icon">🤖</span><span class="text">1人プレイ (vs ガチBot)</span>
-        </button>
+        <button id="btn-pvp" class="mode-btn active" data-mode="pvp">2 PLAYER</button>
+        <button id="btn-pve" class="mode-btn" data-mode="pve">VS BOT</button>
       </div>
 
-      <button id="btn-start" class="start-btn">ゲーム開始</button>
+      <button id="btn-start" class="start-btn">START</button>
     </div>
   </div>
 
