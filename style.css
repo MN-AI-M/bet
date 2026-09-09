@@ -425,13 +425,13 @@ body {
   margin-bottom: 6px;
 }
 
-.skill-card-item .card-title {
+.skill-card-item  {
   font-size: 0.9rem;
   font-weight: bold;
   margin-bottom: 4px;
 }
 
-.skill-card-item .card-desc {
+.skill-card-item  {
   font-size: 0.75rem;
   color: var(--text-sub);
 }
@@ -512,18 +512,6 @@ body {
   user-select: none;
 }
 
-/* スキルカードのスタイル */
-.skill-card-item {
-  flex: 0 0 auto;
-  width: 90px;
-  height: 130px;
-  background: #2a2a2a;
-  border: 2px solid #444;
-  border-radius: 8px;
-  cursor: grab;
-  touch-action: none; /* ドラッグ操作をJSで完全制御するため */
-  transition: transform 0.1s ease;
-}
 
 .skill-card-item:active {
   cursor: grabbing;
@@ -546,6 +534,71 @@ body {
   opacity: 0.85;
   transform: scale(1.05);
   box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+
+
+
+/* スキルカードのデザインを洗練されたダーク系に調整 */
+.skill-card-item {
+  flex: 0 0 auto;
+  width: 95px;
+  height: 135px;
+  background: linear-gradient(135deg, #2c3e50, #1a252f); /* 重みのある綺麗なグラデーション */
+  border: 2px solid #3498db; /* 鮮やかな青系の枠線 */
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  box-sizing: border-box;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.skill-card-item:hover {
+  border-color: #5dade2;
+  transform: translateY(-3px);
+}
+
+.card-title {
+  font-weight: bold;
+  font-size: 14px;
+  color: #ecf0f1;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.card-desc {
+  font-size: 11px;
+  color: #bdc3c7;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ★ドラッグ中に指/カーソルに追従する「少し透明な丸い白いポインター」 */
+.skill-drag-cursor {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.6); /* 少し透明な白 */
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* ドラッグ中に重なっているマスの色を変更するクラス */
+.cell.drag-over {
+  background-color: rgba(52, 152, 219, 0.4) !important; /* ふんわり青く光る（お好みで変更可能） */
+  border-color: #3498db !important;
+  transform: scale(0.98);
+  transition: background-color 0.1s, transform 0.1s;
 }
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--text-main); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
