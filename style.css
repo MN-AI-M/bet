@@ -14,7 +14,7 @@
   --accent-color: #319795;
 
   --board-grid-size: 9;
-  --cell-size: clamp(32px, 5.5vmin, 56px); /* 画面サイズに合わせて可変 */
+  --cell-size: clamp(32px, 5.5vmin, 56px);
 }
 
 /* =======================================
@@ -25,6 +25,7 @@
   margin: 0;
   padding: 0;
   user-select: none;
+  touch-action: manipulation;
 }
 
 body {
@@ -35,10 +36,9 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
-/* 共通スクリーンスタイル */
 .screen {
   display: none;
   width: 100%;
@@ -57,7 +57,7 @@ body {
 }
 
 /* =======================================
-   タイトル画面 (明るい・タイトル文字なし・超画面フィット)
+   タイトル画面
 ======================================= */
 #screen-title {
   position: relative;
@@ -76,18 +76,16 @@ body {
   display: flex;
 }
 
-/* 背景で画面全体に大きく動く盤面 */
 .bg-board-container {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  opacity: 0.35; /* 薄く見せる */
+  opacity: 0.35;
   pointer-events: none;
   z-index: 1;
 }
 
-/* 背景専用の動的盤面サイズ設定 */
 .bg-board-container .board {
   grid-template-columns: repeat(var(--board-grid-size), clamp(45px, 9vmin, 85px));
   grid-template-rows: repeat(var(--board-grid-size), clamp(45px, 9vmin, 85px));
@@ -104,7 +102,6 @@ body {
   font-size: clamp(1.8rem, 4vmin, 3.2rem);
 }
 
-/* タイトルコンテンツ（UIのみ・文字なし） */
 .title-content {
   position: relative;
   z-index: 10;
@@ -119,7 +116,6 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
-/* モード選択ボタン */
 .mode-select {
   display: flex;
   gap: 12px;
@@ -135,14 +131,8 @@ body {
   color: var(--text-sub);
   font-size: 0.9rem;
   font-weight: 800;
-  letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.mode-btn:hover {
-  background: #e2e8f0;
-  color: var(--text-main);
 }
 
 .mode-btn.active {
@@ -152,30 +142,21 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-/* スタートボタン */
 .start-btn {
   width: 100%;
   padding: 16px;
   font-size: 1.1rem;
   font-weight: 800;
-  letter-spacing: 2px;
   border: none;
   border-radius: 10px;
   background: var(--text-main);
   color: #ffffff;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-}
-
-.start-btn:hover {
-  transform: translateY(-2px);
-  background: #2d3748;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* =======================================
-   対戦メイン画面
+   対戦画面
 ======================================= */
 .game-header {
   display: flex;
@@ -187,7 +168,6 @@ body {
   padding: 16px 24px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .player-info {
@@ -235,7 +215,6 @@ body {
   padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
 }
 
 .board {
@@ -258,7 +237,7 @@ body {
   font-weight: bold;
   cursor: pointer;
   position: relative;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 .cell:hover { background-color: var(--card-bg); }
@@ -282,18 +261,18 @@ body {
   left: 2px;
 }
 
+/* ドラッグ中に盤面のマスがハイライトされるスタイル */
 .cell.target-selectable {
   animation: pulse 0.8s infinite alternate;
   border: 2px solid var(--accent-color);
-  cursor: crosshair;
+  cursor: pointer;
 }
 
 @keyframes pulse {
   0% { background-color: rgba(49, 151, 149, 0.1); }
-  100% { background-color: rgba(49, 151, 149, 0.3); }
+  100% { background-color: rgba(49, 151, 149, 0.35); }
 }
 
-/* 視界妨害 */
 .fog-overlay {
   position: absolute;
   background-color: rgba(255, 255, 255, 0.95);
@@ -310,128 +289,30 @@ body {
 .fog-overlay::after { content: "視界妨害エリア"; }
 
 /* =======================================
-   サイドパネル・カード・ログ
+   サイドパネル (ログのみ)
 ======================================= */
 .side-panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: 320px;
+  width: 280px;
 }
 
-.card-section, .log-section {
+.log-section {
   background-color: var(--panel-bg);
   padding: 16px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
-.card-section h3, .log-section h3 {
+.log-section h3 {
   font-size: 0.9rem;
   color: var(--text-sub);
   margin-bottom: 12px;
 }
 
-.hand-cards {
-  display: flex;
-  gap: 8px;
-  min-height: 120px;
-  margin-bottom: 12px;
-}
-
-.hand-card {
-  flex: 1;
-  background-color: var(--card-bg);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  padding: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.hand-card:hover:not(.disabled) {
-  border-color: var(--text-main);
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.hand-card.clickable {
-  border-color: #38a169;
-  box-shadow: 0 0 8px rgba(56, 161, 105, 0.3);
-}
-
-.hand-card.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.hand-card .card-id {
-  background-color: var(--text-main);
-  color: #ffffff;
-  font-size: 0.75rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-
-.hand-card .card-title {
-  font-size: 0.85rem;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.hand-card .card-desc {
-  font-size: 0.7rem;
-  color: var(--text-sub);
-}
-
-.empty-hand-msg {
-  width: 100%;
-  text-align: center;
-  padding: 40px 0;
-  color: var(--text-sub);
-  font-size: 0.9rem;
-  background-color: rgba(0,0,0,0.02);
-  border-radius: 8px;
-}
-
-/* アクションエリア */
-.action-prompt {
-  font-size: 0.85rem;
-  color: var(--accent-color);
-  margin-bottom: 4px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.skill-actions { display: flex; flex-direction: column; gap: 8px; }
-
-.action-btn {
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.action-btn:active { transform: scale(0.98); }
-.action-btn.primary { background-color: var(--text-main); color: #ffffff; }
-.action-btn.secondary { background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); }
-.action-btn.cancel { background-color: var(--p1-color); color: white; margin-top: 8px; width: 100%; }
-
-.target-prompt { font-size: 0.85rem; color: var(--accent-color); text-align: center; }
-
-/* ログエリア */
 .game-log {
-  height: 180px;
+  height: 380px;
   overflow-y: auto;
   font-size: 0.85rem;
   display: flex;
@@ -446,8 +327,167 @@ body {
 }
 
 /* =======================================
-   リザルトモーダル
+   【中央ポップアップ】新UIオーバーレイ
 ======================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 500;
+  transition: opacity 0.2s ease;
+}
+
+/* 1. スキルゲット通知カード */
+.get-card-card {
+  width: 280px;
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 2px solid var(--accent-color);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+  text-align: center;
+  cursor: grab;
+  transition: transform 0.1s ease;
+}
+
+.card-badge {
+  display: inline-block;
+  background: var(--accent-color);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.card-title-lg {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.card-desc-lg {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+.swipe-hint {
+  font-size: 0.75rem;
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+/* 2. スキル選択・ドラッグ用モーダル */
+.skills-container {
+  width: 90%;
+  max-width: 440px;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+.skills-header h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.skills-header p {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+  margin-bottom: 16px;
+}
+
+.skills-list {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.skill-card-item {
+  flex: 1;
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: grab;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.skill-card-item:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+.skill-card-item .card-id {
+  background: var(--text-main);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.skill-card-item .card-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.skill-card-item .card-desc {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+}
+
+/* 3. ドラッグ時にマウス/指の先端にくっつくプロキシ */
+.drag-proxy {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  width: 140px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid var(--accent-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+/* アクションボタン汎用 */
+.action-btn {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  width: 100%;
+}
+
+.action-btn.secondary {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
 .modal {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -472,4 +512,3 @@ body {
 
 .modal-content h2 { font-size: 2rem; margin-bottom: 12px; color: var(--text-main); }
 .modal-content p { margin-bottom: 24px; color: var(--text-sub); }
-.modal-content button { width: 100%; margin-bottom: 8px; }
