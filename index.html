@@ -49,12 +49,15 @@
       <aside class="side-panel">
         <div class="card-section">
           <h3>手札・ストック (最大3枠)</h3>
-          <!-- 手札が並ぶエリア -->
           <div id="hand-cards" class="hand-cards"></div>
           
           <div id="skill-actions" class="skill-actions hidden">
-            <button id="btn-skip-skill" class="action-btn secondary">ターン終了 (技を使わない)</button>
+            <div class="action-prompt">2. アクションを選択</div>
+            <!-- カードを引くか、技を使わず終わるボタン -->
+            <button id="btn-draw-card" class="action-btn primary">カードを引いてターン終了</button>
+            <button id="btn-skip-action" class="action-btn secondary hidden">何もしない (ターン終了)</button>
           </div>
+
           <div id="target-prompt" class="target-prompt hidden">
             <span>対象のマスを盤面からクリックしてください</span>
             <button id="btn-cancel-target" class="action-btn cancel">キャンセル</button>
