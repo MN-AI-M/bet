@@ -106,7 +106,7 @@ function setupSkillDragAndDrop(cardEl, card, index) {
         document.body.appendChild(cloneEl);
         cardEl.style.opacity = '0.4';
 
-        // ★【重要】ドラッグ開始した瞬間に邪魔なモーダルを隠す！
+        // ドラッグ開始時にモーダルを隠す
         if (elements.modalSkills) {
           elements.modalSkills.classList.remove('show');
           elements.modalSkills.classList.add('hidden');
@@ -117,10 +117,10 @@ function setupSkillDragAndDrop(cardEl, card, index) {
         cloneEl.style.left = `${moveEvent.clientX - 45}px`;
         cloneEl.style.top = `${moveEvent.clientY - 65}px`;
 
-        // クローンを一時隠して、下にあるセルを検知できるようにする
-        cloneEl.style.display = 'none';
+        // クローンを一時非表示にして下にある盤面セルをハイライト
+        cloneEl.style.visibility = 'hidden';
         const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-        cloneEl.style.display = 'block';
+        cloneEl.style.visibility = 'visible';
 
         const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
 
@@ -139,15 +139,18 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       document.querySelectorAll('.board-cell').forEach(cell => cell.classList.remove('drag-over'));
 
       if (cloneEl) {
-        cloneEl.style.display = 'none';
+        // ★【修正ポイント】クローンを消す前に「指の下にある要素」を特定する
+        cloneEl.style.visibility = 'hidden';
         const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
+        
+        // クローンを削除
         cloneEl.remove();
         cloneEl = null;
 
         const boardCell = targetElement ? targetElement.closest('.board-cell') : null;
 
         if (boardCell) {
-          // 盤面にドロップ成功：モーダルを完全に閉じてスキル発動
+          // 盤面にドロップ成功！
           const modal = document.getElementById('skill-modal');
           if (modal) modal.style.display = 'none';
 
@@ -155,7 +158,7 @@ function setupSkillDragAndDrop(cardEl, card, index) {
           executeSkill(card.id, boardCell);
           renderGame();
         } else {
-          // 盤面以外で離してしまった場合：モーダルを元に戻す
+          // 盤面以外で離された場合：モーダルを元に戻す
           if (elements.modalSkills) {
             elements.modalSkills.classList.remove('hidden');
             requestAnimationFrame(() => {
