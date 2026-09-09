@@ -20,15 +20,14 @@ const SKILLS = [
 const state = {
   mode: 'pvp',
   currentPlayer: 1,
-  phase: 'MAIN', // スキル使用＆石配置フェーズ
+  phase: 'ACTION_OR_PLACE', // スキル使用または着手を選択するフェーズ
   board: [],
-  hands: { 1: [], 2: [] }, 
+  hands: { 1: [], 2: [] },
   targetCallback: null,
   fogForPlayer: null,
   fogArea: null,
   overrideNextCard: {},
-  phantomStones: [],
-  extraTurn: false
+  phantomStones: []
 };
 
 const elements = {
@@ -46,27 +45,11 @@ const elements = {
   modalResult: document.getElementById('modal-result'),
   resultTitle: document.getElementById('result-title'),
   resultMessage: document.getElementById('result-message'),
-  skillsList: document.getElementById('skills-list')
+  skillsList: document.getElementById('skills-list') // ボード下のカード設置領域
 };
 
 /* =======================================
-   デザイン強制初期化（ホワイトテーマ）
-======================================= */
-function applyWhiteTheme() {
-  document.body.style.backgroundColor = '#ffffff';
-  document.body.style.color = '#000000';
-  document.body.style.fontFamily = 'sans-serif';
-  
-  // 既存の不要なモーダルを強制非表示
-  const modals = ['modal-get-card', 'modal-skills'];
-  modals.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-
-/* =======================================
-   背景デモ対戦 (Bot vs Bot) ロジック
+   背景デモ対戦 (Bot vs Bot)
 ======================================= */
 let bgDemoInterval = null;
 let bgBoardState = [];
@@ -86,8 +69,8 @@ function initBgDemo() {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
-      cell.style.border = '1px solid #000';
-      cell.style.backgroundColor = '#fff';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
       bgBoardEl.appendChild(cell);
     }
   }
@@ -107,13 +90,14 @@ function renderBgBoard() {
       const cellData = bgBoardState[r][c];
       const cell = cells[idx];
       
+      cell.className = 'cell';
       cell.textContent = '';
       if (cellData.owner === 1) {
         cell.textContent = '〇';
-        cell.style.color = '#000';
+        cell.classList.add('p1');
       } else if (cellData.owner === 2) {
         cell.textContent = '✕';
-        cell.style.color = '#000';
+        cell.classList.add('p2');
       }
     }
   }
@@ -128,6 +112,7 @@ function stepBgDemo() {
 
   const move = candidates[Math.floor(Math.random() * Math.min(2, candidates.length))];
   bgBoardState[move.r][move.c].owner = bgCurrentPlayer;
+
   renderBgBoard();
 
   if (checkWinBoard(bgBoardState, bgCurrentPlayer)) {
@@ -147,10 +132,11 @@ function stopBgDemo() {
 /* =======================================
    メインゲーム ロジック
 ======================================= */
+
 window.addEventListener('DOMContentLoaded', () => {
-  applyWhiteTheme();
   init();
   initBgDemo();
+  initDraggableScroll();
 });
 
 function init() {
@@ -176,6 +162,7 @@ function showTitleScreen() {
 
 function startGame() {
   stopBgDemo();
+
   elements.screenTitle.classList.remove('active');
   elements.modalResult.classList.add('hidden');
   elements.screenGame.classList.add('active');
@@ -186,30 +173,33 @@ function startGame() {
     }))
   );
 
+  state.currentPlayer = 1;
   state.hands = { 1: [], 2: [] };
+  state.fogForPlayer = null;
+  state.fogArea = null;
   state.overrideNextCard = {};
   state.phantomStones = [];
-  state.extraTurn = false;
 
-  startTurn(1);
+  startTurn();
 }
 
-function startTurn(player) {
-  state.currentPlayer = player;
-  state.phase = 'MAIN';
-
-  drawCardSilent();
+function startTurn() {
+  state.phase = 'ACTION_OR_PLACE';
   
+  // ターン開始時にカードを1枚ドロー（「ハズレ」は自動除外）
+  drawCardForCurrentPlayer();
+
   renderBoard();
-  renderHand();
+  renderHandUI();
   updateUI();
 
   if (state.mode === 'pve' && state.currentPlayer === 2) {
-    botTurn();
+    setTimeout(() => botTurnExecution(), 600);
   }
 }
 
-function drawCardSilent() {
+// 3. 「ハズレ」カードは保存しない処理
+function drawCardForCurrentPlayer() {
   const currentHand = state.hands[state.currentPlayer];
   if (currentHand.length >= MAX_HAND_SIZE) return;
 
@@ -222,154 +212,65 @@ function drawCardSilent() {
     drawn = SKILLS[Math.floor(Math.random() * SKILLS.length)];
   }
 
-  // ハズレ(id:1)は保存しない
-  if (drawn.id !== 1) {
+  // ID: 1（ハズレ）でない場合のみ手札に追加
+  if (drawn && drawn.id !== 1) {
     currentHand.push(drawn);
   }
 }
 
-function renderBoard() {
-  elements.board.innerHTML = '';
-  // ボード自体のスタイルも白黒に
-  elements.board.style.backgroundColor = '#fff';
-  elements.board.style.border = '2px solid #000';
-
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      const cellData = state.board[r][c];
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.dataset.row = r;
-      cell.dataset.col = c;
-
-      // セルも完全白黒デザイン
-      cell.style.border = '1px solid #000';
-      cell.style.backgroundColor = '#fff';
-      cell.style.display = 'flex';
-      cell.style.alignItems = 'center';
-      cell.style.justifyContent = 'center';
-      cell.style.fontSize = '24px';
-      cell.style.fontWeight = 'bold';
-
-      if (cellData.owner === 1) {
-        cell.textContent = '〇';
-        cell.style.color = '#000';
-      } else if (cellData.owner === 2) {
-        cell.textContent = '✕';
-        cell.style.color = '#000';
-      }
-
-      if (cellData.isPhantom) cell.style.opacity = '0.5';
-      if (cellData.promisedOwner) cell.style.boxShadow = 'inset 0 0 5px #000';
-      if (cellData.trapOwner === state.currentPlayer) cell.textContent += '!?';
-
-      cell.addEventListener('click', () => handleCellClick(r, c));
-      elements.board.appendChild(cell);
-    }
-  }
-  updateFogOverlay();
-}
-
-function updateFogOverlay() {
-  if (state.fogForPlayer === state.currentPlayer && state.fogArea) {
-    const { r, c, size } = state.fogArea;
-    const cellSize = 42; 
-    elements.fogOverlay.style.top = `${r * cellSize + 20}px`;
-    elements.fogOverlay.style.left = `${c * cellSize + 20}px`;
-    elements.fogOverlay.style.width = `${size * cellSize - 4}px`;
-    elements.fogOverlay.style.height = `${size * cellSize - 4}px`;
-    elements.fogOverlay.style.backgroundColor = '#000'; // 黒ベタ塗り
-    elements.fogOverlay.classList.remove('hidden');
-  } else {
-    elements.fogOverlay.classList.add('hidden');
-  }
-}
-
-// 盤面の下に手札を展開する
-function renderHand() {
-  const listEl = elements.skillsList;
-  if (!listEl) return;
-  
-  listEl.innerHTML = '';
-  listEl.style.display = 'flex';
-  listEl.style.justifyContent = 'center';
-  listEl.style.flexWrap = 'wrap';
-  listEl.style.gap = '10px';
-  listEl.style.marginTop = '20px';
+// 1. ボード下のカード描画処理
+function renderHandUI() {
+  if (!elements.skillsList) return;
+  elements.skillsList.innerHTML = '';
 
   const currentHand = state.hands[state.currentPlayer];
-  if (!currentHand || state.mode === 'pve' && state.currentPlayer === 2) return; // Botの手札は隠す
+  const isHumanTurn = !(state.mode === 'pve' && state.currentPlayer === 2);
 
   currentHand.forEach((card, index) => {
     const cardEl = document.createElement('div');
-    // 白黒カードデザイン
-    cardEl.style.border = '2px solid #000';
-    cardEl.style.backgroundColor = '#fff';
-    cardEl.style.color = '#000';
-    cardEl.style.padding = '8px 12px';
-    cardEl.style.cursor = 'grab';
-    cardEl.style.userSelect = 'none';
-    cardEl.style.textAlign = 'center';
-    cardEl.style.minWidth = '100px';
-
+    cardEl.className = 'skill-card-item';
     cardEl.innerHTML = `
-      <div style="font-weight:bold; font-size:14px; margin-bottom:4px; border-bottom:1px solid #000;">${card.name}</div>
-      <div style="font-size:11px;">${card.desc}</div>
+      <div class="card-title">${card.name}</div>
+      <div class="card-desc">${card.desc}</div>
     `;
 
-    setupSkillDragAndDrop(cardEl, card, index);
-    listEl.appendChild(cardEl);
+    if (isHumanTurn && state.phase === 'ACTION_OR_PLACE') {
+      setupSkillDragAndDrop(cardEl, card, index);
+    }
+
+    elements.skillsList.appendChild(cardEl);
   });
 }
 
+// 2. シンプルで途切れないドラッグ＆ドロップ機能
 function setupSkillDragAndDrop(cardEl, card, index) {
   let cursorEl = null;
-  let startX = 0;
-  let startY = 0;
 
   cardEl.addEventListener('pointerdown', (e) => {
-    if (state.phase !== 'MAIN') return;
     if (e.button !== 0 && e.pointerType === 'mouse') return;
 
-    startX = e.clientX;
-    startY = e.clientY;
     cardEl.setPointerCapture(e.pointerId);
 
     const onPointerMove = (moveEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-
-      if (!cursorEl && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      if (!cursorEl) {
         cursorEl = document.createElement('div');
-        cursorEl.style.position = 'fixed';
-        cursorEl.style.pointerEvents = 'none';
-        cursorEl.style.zIndex = '9999';
-        cursorEl.style.border = '2px dashed #000';
-        cursorEl.style.backgroundColor = '#fff';
-        cursorEl.style.color = '#000';
-        cursorEl.style.padding = '5px 10px';
-        cursorEl.style.fontWeight = 'bold';
-        cursorEl.style.transform = 'translate(-50%, -50%)';
-        cursorEl.textContent = card.name;
+        cursorEl.className = 'skill-drag-cursor';
         document.body.appendChild(cursorEl);
-        
-        // 消える（透明化）処理は削除
+        cardEl.style.opacity = '0.4';
       }
 
-      if (cursorEl) {
-        cursorEl.style.left = `${moveEvent.clientX}px`;
-        cursorEl.style.top = `${moveEvent.clientY}px`;
+      cursorEl.style.left = `${moveEvent.clientX}px`;
+      cursorEl.style.top = `${moveEvent.clientY}px`;
 
-        cursorEl.style.visibility = 'hidden';
-        const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-        cursorEl.style.visibility = 'visible';
+      cursorEl.style.visibility = 'hidden';
+      const targetElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+      cursorEl.style.visibility = 'visible';
 
-        const boardCell = targetElement ? targetElement.closest('.cell') : null;
-        document.querySelectorAll('.cell').forEach(cell => cell.style.backgroundColor = '#fff');
-        
-        if (boardCell) {
-          boardCell.style.backgroundColor = '#e0e0e0'; // 対象ハイライト（薄いグレー）
-        }
+      const boardCell = targetElement ? targetElement.closest('.cell') : null;
+      document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
+      
+      if (boardCell) {
+        boardCell.classList.add('drag-over');
       }
     };
 
@@ -377,11 +278,13 @@ function setupSkillDragAndDrop(cardEl, card, index) {
       cardEl.removeEventListener('pointermove', onPointerMove);
       cardEl.removeEventListener('pointerup', onPointerUp);
 
-      document.querySelectorAll('.cell').forEach(cell => cell.style.backgroundColor = '#fff');
+      cardEl.style.opacity = '1';
+      document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('drag-over'));
 
       if (cursorEl) {
         cursorEl.style.visibility = 'hidden';
         const targetElement = document.elementFromPoint(upEvent.clientX, upEvent.clientY);
+        
         cursorEl.remove();
         cursorEl = null;
 
@@ -399,31 +302,118 @@ function setupSkillDragAndDrop(cardEl, card, index) {
   });
 }
 
+function initDraggableScroll() {
+  const slider = elements.skillsList;
+  if (!slider) return;
+
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  slider.addEventListener('mousedown', (e) => {
+    isDown = true;
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  });
+
+  slider.addEventListener('mouseleave', () => { isDown = false; });
+  slider.addEventListener('mouseup', () => { isDown = false; });
+
+  slider.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    slider.scrollLeft = scrollLeft - (x - startX) * 1.5;
+  });
+
+  slider.addEventListener('touchstart', (e) => {
+    isDown = true;
+    startX = e.touches[0].pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  }, { passive: true });
+
+  slider.addEventListener('touchend', () => { isDown = false; });
+
+  slider.addEventListener('touchmove', (e) => {
+    if (!isDown) return;
+    const x = e.touches[0].pageX - slider.offsetLeft;
+    slider.scrollLeft = scrollLeft - (x - startX) * 1.5;
+  }, { passive: true });
+}
+
+function renderBoard() {
+  elements.board.innerHTML = '';
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cellData = state.board[r][c];
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      if (cellData.owner === 1) {
+        cell.textContent = '〇';
+        cell.classList.add('p1');
+      } else if (cellData.owner === 2) {
+        cell.textContent = '✕';
+        cell.classList.add('p2');
+      }
+
+      if (cellData.isPhantom) cell.classList.add('phantom');
+      if (cellData.promisedOwner) cell.classList.add('promised');
+      if (cellData.trapOwner === state.currentPlayer) cell.classList.add('trap-visible');
+
+      cell.addEventListener('click', () => handleCellClick(r, c));
+      elements.board.appendChild(cell);
+    }
+  }
+  updateFogOverlay();
+}
+
+function updateFogOverlay() {
+  if (state.fogForPlayer === state.currentPlayer && state.fogArea) {
+    const { r, c, size } = state.fogArea;
+    const cellSize = 42; 
+    elements.fogOverlay.style.top = `${r * cellSize + 20}px`;
+    elements.fogOverlay.style.left = `${c * cellSize + 20}px`;
+    elements.fogOverlay.style.width = `${size * cellSize - 4}px`;
+    elements.fogOverlay.style.height = `${size * cellSize - 4}px`;
+    elements.fogOverlay.classList.remove('hidden');
+  } else {
+    elements.fogOverlay.classList.add('hidden');
+  }
+}
+
 function updateUI() {
   const p1Name = "Player 1";
   const p2Name = state.mode === 'pve' ? "Bot" : "Player 2";
   const currentName = state.currentPlayer === 1 ? p1Name : p2Name;
-  
+
   elements.statusTurn.textContent = `${currentName} の番`;
 
   if (elements.p1Info) elements.p1Info.querySelector('.player-name')?.replaceChildren(p1Name);
   if (elements.p2Info) elements.p2Info.querySelector('.player-name')?.replaceChildren(p2Name);
 
-  if (state.phase === 'MAIN') {
-    elements.statusPhase.textContent = '石を配置してください（スキル使用可）';
+  elements.p1Info.classList.toggle('active', state.currentPlayer === 1);
+  elements.p2Info.classList.toggle('active', state.currentPlayer === 2);
+
+  // 4. スキル使用タイミング変更に基づく案内
+  if (state.phase === 'ACTION_OR_PLACE') {
+    elements.statusPhase.textContent = 'スキルを使うか、マスを選んで石を置いてください';
   } else if (state.phase === 'TARGET_SELECT') {
     elements.statusPhase.textContent = '対象のマスを選択してください';
   }
 }
 
 function handleCellClick(r, c) {
-  if (state.phase === 'MAIN') {
+  if (state.phase === 'ACTION_OR_PLACE') {
     placeStone(r, c);
   } else if (state.phase === 'TARGET_SELECT' && state.targetCallback) {
     state.targetCallback(r, c);
   }
 }
 
+// 4. 石を配置してターンを終える
 function placeStone(r, c) {
   const cell = state.board[r][c];
 
@@ -440,8 +430,12 @@ function placeStone(r, c) {
 
   renderBoard();
 
-  if (checkWinAfterAction()) return;
-  
+  const pName = (state.mode === 'pve' && state.currentPlayer === 2) ? "Bot" : `Player ${state.currentPlayer}`;
+  if (checkWin(state.currentPlayer)) {
+    endGame(`${pName} の勝利！`);
+    return;
+  }
+
   endTurn();
 }
 
@@ -463,95 +457,74 @@ function endTurn() {
     state.fogArea = null;
   }
 
-  let nextPlayer = state.currentPlayer === 1 ? 2 : 1;
-  if (state.extraTurn) {
-    nextPlayer = state.currentPlayer;
-    state.extraTurn = false;
-  }
-
-  startTurn(nextPlayer);
+  state.currentPlayer = state.currentPlayer === 1 ? 2 : 1;
+  startTurn();
 }
 
 /* =======================================
-   スキル処理
+   スキル実行処理
 ======================================= */
-function checkWinAfterAction() {
-  if (checkWin(1)) {
-    endGame("Player 1 の勝利！");
-    return true;
-  }
-  if (checkWin(2)) {
-    const pName = state.mode === 'pve' ? "Bot" : "Player 2";
-    endGame(`${pName} の勝利！`);
-    return true;
-  }
-  return false;
-}
-
-function finishSkill() {
-  if (checkWinAfterAction()) return;
-  state.phase = 'MAIN';
-  renderBoard();
-  renderHand();
-  updateUI();
-}
-
 function executeSkill(skillId, targetCell = null) {
   const targetOpponent = state.currentPlayer === 1 ? 2 : 1;
   const dropR = targetCell ? parseInt(targetCell.dataset.row, 10) : null;
   const dropC = targetCell ? parseInt(targetCell.dataset.col, 10) : null;
 
-  switch (skillId) {
-    case 1: 
-      finishSkill(); 
-      break;
+  const afterSkill = () => {
+    renderBoard();
+    renderHandUI();
+    state.phase = 'ACTION_OR_PLACE';
+    updateUI();
+  };
 
-    case 2:
+  switch (skillId) {
+    case 2: // 一手消去
       if (dropR !== null && state.board[dropR][dropC].owner === targetOpponent) {
         state.board[dropR][dropC].owner = 0;
-        finishSkill();
+        afterSkill();
       } else {
         startTargetSelection('相手の石を選んでください', (r, c) => {
           if (state.board[r][c].owner === targetOpponent) {
             state.board[r][c].owner = 0;
-            finishSkill();
+            afterSkill();
           }
         }, c => c.owner === targetOpponent);
       }
       break;
 
-    case 3:
+    case 3: // 視界潰し
       const tr = Math.floor(Math.random() * (BOARD_SIZE - 2));
       const tc = Math.floor(Math.random() * (BOARD_SIZE - 2));
       state.fogForPlayer = targetOpponent;
       state.fogArea = { r: tr, c: tc, size: 3 };
-      finishSkill();
+      afterSkill();
       break;
 
-    case 4:
+    case 4: // 一列消去
       const applyRowColErase = (r, c) => {
         const isRow = Math.random() < 0.5;
         for (let i = 0; i < BOARD_SIZE; i++) {
           if (isRow && state.board[r][i].owner === targetOpponent) state.board[r][i].owner = 0;
           if (!isRow && state.board[i][c].owner === targetOpponent) state.board[i][c].owner = 0;
         }
-        finishSkill();
+        afterSkill();
       };
+
       if (dropR !== null && state.board[dropR][dropC].owner === targetOpponent) {
         applyRowColErase(dropR, dropC);
       } else {
         startTargetSelection('相手の石を選んでください', (r, c) => {
-          if (state.board[r][c].owner === targetOpponent) applyRowColErase(r, c);
+          if (state.board[r][c].owner === targetOpponent) {
+            applyRowColErase(r, c);
+          }
         }, c => c.owner === targetOpponent);
       }
       break;
 
-    case 5:
-      state.extraTurn = true;
-      finishSkill();
+    case 5: // 追加ターン（スキル枠消化のみ）
+      afterSkill();
       break;
 
-    case 6:
+    case 6: // 強制リセット
       if (Math.random() < 0.05) {
         let removed = 0;
         for (let i = 0; i < 100 && removed < 2; i++) {
@@ -563,36 +536,46 @@ function executeSkill(skillId, targetCell = null) {
           }
         }
       }
-      finishSkill();
+      afterSkill();
       break;
 
-    case 7:
+    case 7: // 浸食
       const applyErosion = (r, c) => {
         state.board[r][c].owner = state.currentPlayer;
         state.board[r][c].isPhantom = false;
-        finishSkill();
+        const pName = (state.mode === 'pve' && state.currentPlayer === 2) ? "Bot" : `Player ${state.currentPlayer}`;
+        if (checkWin(state.currentPlayer)) {
+          renderBoard();
+          endGame(`${pName} の勝利！`);
+        } else {
+          afterSkill();
+        }
       };
-      if (dropR !== null) applyErosion(dropR, dropC);
-      else {
-        startTargetSelection('マスを選んでください', (r, c) => applyErosion(r, c));
+
+      if (dropR !== null) {
+        applyErosion(dropR, dropC);
+      } else {
+        startTargetSelection('マスを選んでください', (r, c) => {
+          applyErosion(r, c);
+        });
       }
       break;
 
-    case 8:
+    case 8: // 確約
       if (dropR !== null && state.board[dropR][dropC].owner === 0) {
         state.board[dropR][dropC].promisedOwner = state.currentPlayer;
-        finishSkill();
+        afterSkill();
       } else {
         startTargetSelection('マスを選んでください', (r, c) => {
           if (state.board[r][c].owner === 0) {
             state.board[r][c].promisedOwner = state.currentPlayer;
-            finishSkill();
+            afterSkill();
           }
         }, c => c.owner === 0);
       }
       break;
 
-    case 9:
+    case 9: // 爆弾(5%)
       const applyBomb = (r, c) => {
         if (Math.random() < 0.05) {
           for (let dr = -1; dr <= 1; dr++) {
@@ -604,15 +587,19 @@ function executeSkill(skillId, targetCell = null) {
             }
           }
         }
-        finishSkill();
+        afterSkill();
       };
-      if (dropR !== null) applyBomb(dropR, dropC);
-      else {
-        startTargetSelection('爆弾の中心マスを選んでください', (r, c) => applyBomb(r, c));
+
+      if (dropR !== null) {
+        applyBomb(dropR, dropC);
+      } else {
+        startTargetSelection('爆弾の中心マスを選んでください', (r, c) => {
+          applyBomb(r, c);
+        });
       }
       break;
 
-    case 10:
+    case 10: // 幻影
       let phantoms = 0;
       for (let i = 0; i < 50 && phantoms < 3; i++) {
         let rr = Math.floor(Math.random() * BOARD_SIZE);
@@ -624,26 +611,29 @@ function executeSkill(skillId, targetCell = null) {
           phantoms++;
         }
       }
-      finishSkill();
+      afterSkill();
       break;
 
-    case 11:
+    case 11: // すり替え
       state.overrideNextCard[targetOpponent] = 1;
-      finishSkill();
+      afterSkill();
       break;
 
-    case 12:
+    case 12: // 罠
       if (dropR !== null && state.board[dropR][dropC].owner === 0) {
         state.board[dropR][dropC].trapOwner = state.currentPlayer;
-        finishSkill();
+        afterSkill();
       } else {
         startTargetSelection('罠を仕掛けるマスを選んでください', (r, c) => {
           if (state.board[r][c].owner === 0) {
             state.board[r][c].trapOwner = state.currentPlayer;
-            finishSkill();
+            afterSkill();
           }
         }, c => c.owner === 0);
       }
+      break;
+    default:
+      afterSkill();
       break;
   }
 }
@@ -658,16 +648,9 @@ function startTargetSelection(promptText, callback, filterFn = null) {
     const r = parseInt(cell.dataset.row);
     const c = parseInt(cell.dataset.col);
     if (!filterFn || filterFn(state.board[r][c])) {
-      cell.style.backgroundColor = '#f0f0f0'; // 選択可能なマスを微かに強調
+      cell.classList.add('target-selectable');
     }
   });
-  updateUI();
-}
-
-function cancelTargetSelection() {
-  state.phase = 'MAIN';
-  state.targetCallback = null;
-  finishSkill();
 }
 
 function checkWin(player) {
@@ -697,68 +680,48 @@ function checkWinBoard(board, player) {
 
 function endGame(msg) {
   elements.resultTitle.textContent = "GAME OVER";
-  elements.resultTitle.style.color = "#000";
   elements.resultMessage.textContent = msg;
-  elements.resultMessage.style.color = "#000";
-  elements.modalResult.style.backgroundColor = "rgba(255,255,255,0.95)";
-  elements.modalResult.style.border = "2px solid #000";
   elements.modalResult.classList.remove('hidden');
-  elements.modalResult.style.display = "flex";
 }
 
 /* =======================================
    AI (Bot) ロジック
 ======================================= */
-function botTurn() {
-  setTimeout(() => {
-    const hand = state.hands[2];
-    let useIndex = -1;
+function botTurnExecution() {
+  const hand = state.hands[2];
+  let useIndex = -1;
 
-    for (let i = 0; i < hand.length; i++) {
-      if (hand[i].id === 5) { useIndex = i; break; }
-      if (Math.random() < 0.3 && [2, 4, 7, 8, 12].includes(hand[i].id)) {
-        useIndex = i; break;
-      }
+  for (let i = 0; i < hand.length; i++) {
+    if (hand[i].id === 5) { useIndex = i; break; }
+    if (Math.random() < 0.3 && [2, 4, 7, 8, 12].includes(hand[i].id)) {
+      useIndex = i; break;
     }
-    if (useIndex === -1 && hand.length >= 3) {
-      useIndex = Math.floor(Math.random() * hand.length);
-    }
+  }
 
-    if (useIndex !== -1) {
-      const card = hand[useIndex];
-      state.hands[2].splice(useIndex, 1);
-      
-      const needsTarget = [2, 4, 7, 8, 9, 12].includes(card.id);
-      if (needsTarget) {
-        executeSkill(card.id); 
-        setTimeout(() => {
-          const cells = [];
-          for(let r=0; r<BOARD_SIZE; r++){
-            for(let c=0; c<BOARD_SIZE; c++){
-              // 簡易的に選択可能なものを抽出
-              if(state.board[r][c].owner !== 2) cells.push({r,c}); 
-            }
-          }
-          if (cells.length > 0) {
-            const target = cells[Math.floor(Math.random() * cells.length)];
-            if(state.targetCallback) state.targetCallback(target.r, target.c);
-          } else {
-            cancelTargetSelection();
-          }
-          setTimeout(botPlaceStone, 600);
-        }, 400);
-      } else {
-        executeSkill(card.id);
-        setTimeout(botPlaceStone, 600);
-      }
-    } else {
-      botPlaceStone();
+  if (useIndex !== -1) {
+    const card = hand[useIndex];
+    state.hands[2].splice(useIndex, 1);
+    
+    executeSkill(card.id);
+
+    // ターゲットが必要な場合の簡易自動選択
+    if (state.phase === 'TARGET_SELECT') {
+      setTimeout(() => {
+        const cells = Array.from(elements.board.querySelectorAll('.target-selectable'));
+        if (cells.length > 0) {
+          const target = cells[Math.floor(Math.random() * cells.length)];
+          state.targetCallback(parseInt(target.dataset.row), parseInt(target.dataset.col));
+        }
+        setTimeout(() => botPlaceStone(), 400);
+      }, 300);
+      return;
     }
-  }, 600);
+  }
+
+  setTimeout(() => botPlaceStone(), 400);
 }
 
 function botPlaceStone() {
-  if (state.phase !== 'MAIN' && state.phase !== 'TARGET_SELECT') return;
   const move = getBotBestMoveTreeSearch();
   placeStone(move.r, move.c);
 }
@@ -898,6 +861,7 @@ function getBotBestMoveTreeSearch() {
   
   let bestScore = -Infinity;
   let bestMove = candidates[0] || { r: 4, c: 4 };
+
   const MAX_DEPTH = 7;
 
   for (let move of candidates) {
