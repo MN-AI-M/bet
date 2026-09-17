@@ -56,6 +56,43 @@ body {
   display: none !important;
 }
 
+/* チュートリアル */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.58);
+  pointer-events: none;
+}
+
+.tutorial-box {
+  width: min(90vw, 520px);
+  margin-top: 20vh;
+  padding: 18px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-main);
+  text-align: center;
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.tutorial-highlight {
+  position: relative;
+  z-index: 1001;
+  box-shadow: 0 0 0 4px #ffffff, 0 0 0 8px var(--accent-color), 0 0 24px 8px rgba(49, 151, 149, 0.7);
+  animation: tutorial-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes tutorial-pulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.18); }
+}
+
 /* =======================================
    タイトル画面
 ======================================= */
@@ -269,6 +306,24 @@ body {
   cursor: pointer;
 }
 
+.cell.drag-over {
+  background-color: rgba(49, 151, 149, 0.3);
+  border: 3px solid var(--accent-color);
+}
+
+.cell.win-highlight {
+  z-index: 2;
+  border: 3px solid #f6ad55;
+  background-color: #fffaf0;
+  box-shadow: 0 0 0 3px rgba(246, 173, 85, 0.35), 0 0 18px 6px rgba(246, 173, 85, 0.85);
+  animation: win-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes win-pulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.3); }
+}
+
 @keyframes pulse {
   0% { background-color: rgba(49, 151, 149, 0.1); }
   100% { background-color: rgba(49, 151, 149, 0.35); }
@@ -416,6 +471,19 @@ body {
   justify-content: center;
   width: min(100%, 720px);
   margin-bottom: 16px;
+}
+
+.skill-drag-cursor {
+  position: fixed;
+  z-index: 1100;
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--accent-color);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
 }
 
 .skill-card-item {
