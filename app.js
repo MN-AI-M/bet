@@ -151,8 +151,8 @@ let matchingTimer = null,
     remainingTime = 10,
     currentMatchingSession = 0;
 
-function beginMatchingSession() {
-    state.matchSessionId = ++currentMatchingSession, remainingTime = 10, updateMatchingCountdownUI(remainingTime), showMatchingOverlay(), scheduleAutoBotFallback(state.matchSessionId, 10)
+function beginMatchingSession(seconds = 10) {
+    state.matchSessionId = ++currentMatchingSession, remainingTime = seconds, updateMatchingCountdownUI(remainingTime), showMatchingOverlay(), scheduleAutoBotFallback(state.matchSessionId, seconds)
 }
 
 function scheduleAutoBotFallback(e, t = 10) {
@@ -279,14 +279,25 @@ const HOST_ID = "gomoku_p2p_match_host_v1",
         host: "0.peerjs.com",
         port: 443,
         secure: !0,
+        path: "/",
+        config: {
+            iceServers: [{
+                urls: "stun:stun.l.google.com:19302"
+            }, {
+                urls: ["turn:eu-0.turn.peerjs.com:3478", "turn:us-0.turn.peerjs.com:3478"],
+                username: "peerjs",
+                credential: "peerjsp"
+            }],
+            sdpSemantics: "unified-plan"
+        },
         debug: 0
     };
 
 function startOnlineMatchSearch() {
-    state.mode = "matching", p2pRetryAttempts = 0, beginMatchingSession(), p2pTimer && clearTimeout(p2pTimer), p2pCountdownInterval && clearInterval(p2pCountdownInterval), p2pRetryTimer && clearTimeout(p2pRetryTimer), p2pTimer = setTimeout(() => {
+    state.mode = "matching", p2pRetryAttempts = 0, beginMatchingSession(30), p2pTimer && clearTimeout(p2pTimer), p2pCountdownInterval && clearInterval(p2pCountdownInterval), p2pRetryTimer && clearTimeout(p2pRetryTimer), p2pTimer = setTimeout(() => {
         "matching" === state.mode && state.matchSessionId > 0 && cancelP2PMatchingAndStartBot()
-    }, 1e4);
-    let e = 10;
+    }, 3e4);
+    let e = 30;
     p2pCountdownInterval = setInterval(() => {
         if ("matching" !== state.mode || 0 === state.matchSessionId) return clearInterval(p2pCountdownInterval), void(p2pCountdownInterval = null);
         e = Math.max(0, e - 1), updateMatchingCountdownUI(e), e <= 0 && (clearInterval(p2pCountdownInterval), p2pCountdownInterval = null)
