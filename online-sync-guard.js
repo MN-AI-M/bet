@@ -30,10 +30,20 @@
     if (!message || !message.type) return;
     if (message.type === 'HELLO') {
       state.onlinePeerReady = true;
-      if (conn) conn.send({ type: 'SYNC_STATE', currentPlayer: state.currentPlayer, board: state.board, hands: state.hands, phase: state.phase });
+      if (conn && state.myOnlinePlayer === 1) {
+        conn.send({
+          type: 'SYNC_STATE',
+          player: 1,
+          currentPlayer: state.currentPlayer,
+          board: state.board,
+          hands: state.hands,
+          phase: state.phase
+        });
+      }
       return;
     }
     if (message.type === 'SYNC_STATE') {
+      if (state.myOnlinePlayer !== 2 || message.player !== 1) return;
       state.currentPlayer = message.currentPlayer || state.currentPlayer;
       state.board = message.board || state.board;
       state.hands = message.hands || state.hands;

@@ -25,6 +25,16 @@
     });
   }
 
+  window.addEventListener('skill-tac-score-message', (event) => {
+    const message = event.detail;
+    if (!message || message.type !== 'SCORE_PLACE' || message.player === state.myOnlinePlayer) return;
+    if (state.mode !== 'pvp_online' || !state.scoreMode || state.currentPlayer !== message.player) return;
+    applyScoreMove({ r: message.r, c: message.c }, true);
+    if (message.scores) state.scores = message.scores;
+    if (message.lineCounts) state.lineCounts = message.lineCounts;
+    updateScoreUI();
+  });
+
   function ensureState() {
     state.scoreMode = true;
     state.scores = state.scores || { 1: 0, 2: 0 };
