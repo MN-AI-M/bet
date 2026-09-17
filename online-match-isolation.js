@@ -61,7 +61,11 @@
             if (connection.metadata && connection.metadata.mode !== currentModeKey()) return connection.close();
             connection.on('open', () => attachDedicatedConnection(connection, dedicatedPeer))
         });
-        dedicatedPeer.on('error', () => {})
+        dedicatedPeer.on('error', () => {
+            if (dedicatedConnection) return;
+            if (dedicatedPeer && typeof dedicatedPeer.destroy === 'function') dedicatedPeer.destroy();
+            dedicatedPeer = null
+        })
     }
 
     function connectToDedicatedPeer(peerId, mode) {
@@ -73,9 +77,18 @@
                     mode: currentModeKey()
                 }
             });
-            connection.on('open', () => attachDedicatedConnection(connection, dedicatedPeer))
+            connection.on('open', () => attachDedicatedConnection(connection, dedicatedPeer));
+            connection.on('error', () => {
+                if (dedicatedConnection) return;
+                if (dedicatedPeer && typeof dedicatedPeer.destroy === 'function') dedicatedPeer.destroy();
+                dedicatedPeer = null
+            })
         });
-        dedicatedPeer.on('error', () => {})
+        dedicatedPeer.on('error', () => {
+            if (dedicatedConnection) return;
+            if (dedicatedPeer && typeof dedicatedPeer.destroy === 'function') dedicatedPeer.destroy();
+            dedicatedPeer = null
+        })
     }
 
     function handleIsolationMessage(message) {
