@@ -164,6 +164,11 @@ function scheduleAutoBotFallback(e, t = 10) {
     }, 1e3)
 }
 
+function updateP2PMatchingStatus(message) {
+    const status = document.getElementById("matching-text");
+    status && (status.textContent = message)
+}
+
 function cancelMatchingAndStartBot(e = state.matchSessionId) {
     e && state.matchSessionId !== e || (cleanupMatchingTimers(), state.matchSessionId = 0, peer && peer.destroy(), peer = null, hideMatchingOverlay(), alert("周りに遊べる人が見つからなかったため、Bot対戦を開始します！"), state.mode = "pve", elements.screenTitle.classList.remove("active"), elements.screenGame.classList.add("active"), startGame())
 }
@@ -317,12 +322,19 @@ function retryP2PConnection() {
 }
 
 function handleP2PError(error) {
-    if ("unavailable-id" === error.type) return connectToHost();
+    const errorType = error && error.type || "unknown";
+    updateP2PMatchingStatus(`接続中... (${errorType})`);
+    if ("unavailable-id" === errorType) {
+        peer && peer.destroy();
+        peer = null;
+        return connectToHost()
+    }
     console.error("PeerJS Error:", error);
     retryP2PConnection()
 }
 
 function tryToBecomeHost() {
+    updateP2PMatchingStatus("対戦相手を探しています...");
     peer = new Peer(HOST_ID, PEER_CONFIG), peer.on("open", () => {
         state.myOnlinePlayer = 1, peer.on("connection", e => {
             conn = e, setupP2PConnection()
@@ -331,6 +343,7 @@ function tryToBecomeHost() {
 }
 
 function connectToHost() {
+    updateP2PMatchingStatus("対戦相手に接続しています...");
     peer && peer.destroy(), peer = new Peer(void 0, PEER_CONFIG), peer.on("open", () => {
         state.myOnlinePlayer = 2, conn = peer.connect(HOST_ID), setupP2PConnection()
     }), peer.on("error", handleP2PError)
