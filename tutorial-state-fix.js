@@ -1,5 +1,24 @@
 (() => {
   const completedKey = 'skill-tac-tutorial-completed';
+  const originalStartTutorial = window.startTutorial;
+
+  if (typeof originalStartTutorial === 'function') {
+    window.startTutorial = () => {
+      if (localStorage.getItem(completedKey) === '1' || state.isTutorial) return;
+      originalStartTutorial();
+    };
+  }
+
+  const originalAdvanceTutorialStep2 = window.advanceTutorialStep2;
+  if (typeof originalAdvanceTutorialStep2 === 'function') {
+    window.advanceTutorialStep2 = () => {
+      originalAdvanceTutorialStep2();
+      if (state.isTutorial && state.tutorialStep === 2 && state.hands[1].length > 1) {
+        state.hands[1] = state.hands[1].slice(0, 1);
+        renderHandUI();
+      }
+    };
+  }
 
   function applyTutorialState() {
     document.getElementById('btn-tutorial-open')?.remove();
@@ -8,7 +27,7 @@
       if (typeof state !== 'undefined') state.isTutorial = false;
       document.getElementById('screen-title')?.classList.add('active');
       document.getElementById('screen-game')?.classList.remove('active');
-    } else if (typeof startTutorial === 'function' && typeof state !== 'undefined' && !state.isTutorial) {
+    } else if (typeof window.startTutorial === 'function' && typeof state !== 'undefined' && !state.isTutorial) {
       startTutorial();
     }
   }

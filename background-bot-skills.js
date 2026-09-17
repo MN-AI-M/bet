@@ -3,7 +3,7 @@
   normalBotSkills.src = 'normal-bot-skills.js?v=1';
   document.head.appendChild(normalBotSkills);
   const tutorialStateFix = document.createElement('script');
-  tutorialStateFix.src = 'tutorial-state-fix.js?v=1';
+  tutorialStateFix.src = 'tutorial-state-fix.js?v=2';
   document.head.appendChild(tutorialStateFix);
   let demoTimer = null;
   let demoBoard = [];

@@ -203,10 +203,11 @@ body {
 
 .game-main {
   display: flex;
+  flex-direction: column;
   gap: 24px;
   width: 100%;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .board-container {
@@ -413,6 +414,7 @@ body {
   display: flex;
   gap: 12px;
   justify-content: center;
+  width: min(100%, 720px);
   margin-bottom: 16px;
 }
 
