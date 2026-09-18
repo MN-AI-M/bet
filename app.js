@@ -279,23 +279,9 @@ let peer = null,
     p2pCountdownInterval = null,
     p2pRetryTimer = null,
     p2pRetryAttempts = 0;
-const HOST_ID = "gomoku_p2p_match_host_v1",
+const HOST_ID = `skill-tac-${location.hostname.replace(/[^a-zA-Z0-9_-]/g, "-")}`,
     PEER_CONFIG = {
-        host: "0.peerjs.com",
-        port: 443,
-        secure: !0,
-        path: "/",
-        config: {
-            iceServers: [{
-                urls: "stun:stun.l.google.com:19302"
-            }, {
-                urls: ["turn:eu-0.turn.peerjs.com:3478", "turn:us-0.turn.peerjs.com:3478"],
-                username: "peerjs",
-                credential: "peerjsp"
-            }],
-            sdpSemantics: "unified-plan"
-        },
-        debug: 0
+        debug: 1
     };
 
 function startOnlineMatchSearch() {
