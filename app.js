@@ -1048,10 +1048,18 @@ function startTutorial() {
     state.isTutorial = !0, state.tutorialStep = 1, state.mode = "pve", elements.screenTitle.classList.remove("active"), elements.screenGame.classList.add("active"), startGame(), setupTutorialStep1()
 }
 
+function animateTutorialGuide() {
+    const guide = document.querySelector("#tutorial-overlay .tutorial-box");
+    if (!guide) return;
+    guide.style.animation = "none";
+    guide.offsetWidth;
+    guide.style.animation = "tutorial-pulse 1.2s ease-in-out 2 alternate"
+}
+
 function setupTutorialStep1() {
     const e = document.getElementById("tutorial-overlay"),
         t = document.getElementById("tutorial-text");
-    e.classList.remove("hidden"), t.textContent = "光っている場所に石を置きましょう", setTimeout(() => {
+    e.classList.remove("hidden"), t.textContent = "光っている場所に石を置きましょう", animateTutorialGuide(), setTimeout(() => {
         const e = elements.board.querySelector('.cell[data-row="4"][data-col="4"]');
         e && e.classList.add("tutorial-highlight")
     }, 100)
@@ -1059,7 +1067,7 @@ function setupTutorialStep1() {
 
 function advanceTutorialStep2() {
     state.tutorialStep = 2, clearTutorialHighlights();
-    document.getElementById("tutorial-text").textContent = "獲得した一手消去カードをドラッグしてBotの石を消しましょう", setTimeout(() => {
+    document.getElementById("tutorial-text").textContent = "獲得した一手消去カードをドラッグしてBotの石を消しましょう", animateTutorialGuide(), setTimeout(() => {
         const e = elements.skillsList.children[0],
             t = elements.board.querySelector('.cell[data-row="4"][data-col="3"]');
         e && e.classList.add("tutorial-highlight"), t && t.classList.add("tutorial-highlight")

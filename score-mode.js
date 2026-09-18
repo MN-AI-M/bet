@@ -434,22 +434,10 @@
         const title = document.querySelector('.mode-select');
         const start = document.getElementById('btn-start');
         if (!title || !start) return;
-        const scoreButton = document.createElement('button');
-        scoreButton.id = 'btn-score';
-        scoreButton.className = 'mode-btn';
-        scoreButton.textContent = 'SCORE 4';
-        title.appendChild(scoreButton);
-        scoreButton.addEventListener('click', () => {
-            scoreSelected = !0;
-            state.mode = SCORE_MODE;
-            document.querySelectorAll('.mode-btn').forEach((button) => button.classList.remove('active'));
-            scoreButton.classList.add('active')
-        });
         ['btn-pvp', 'btn-pve'].forEach((id) => {
             const button = document.getElementById(id);
             if (button) button.addEventListener('click', () => {
                 leaveScoreMode();
-                scoreButton.classList.remove('active')
             })
         });
         start.addEventListener('click', (event) => {
