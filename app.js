@@ -59,6 +59,10 @@ const BOARD_SIZE = 9,
             1: [],
             2: []
         },
+        fixedSkillOrder: {
+            1: [2, 4, 5, 7, 8, 9, 12],
+            2: [2, 4, 5, 7, 8, 9, 12]
+        },
         targetCallback: null,
         fogForPlayer: null,
         fogArea: null,
@@ -392,11 +396,19 @@ function startGame() {
     }))), state.currentPlayer = 1, state.hands = {
         1: [],
         2: []
+    }, state.fixedSkillOrder = {
+        1: [2, 4, 5, 7, 8, 9, 12],
+        2: [2, 4, 5, 7, 8, 9, 12]
     }, state.fogForPlayer = null, state.fogArea = null, state.overrideNextCard = {}, state.phantomStones = [], state.isGameOver = !1, isAiThinking = !1, startTurn()
 }
 
 function getOpponentPlayer(e = state.currentPlayer) {
     return 1 === e ? 2 : 1
+}
+
+function getDisplayHandPlayer() {
+    if ("pvp_online" === state.mode && state.myOnlinePlayer) return state.myOnlinePlayer;
+    return state.currentPlayer
 }
 
 function clearTargetSelection() {
@@ -409,25 +421,36 @@ function startTurn() {
 }
 
 function drawCardForCurrentPlayer() {
-    const e = state.hands[state.currentPlayer];
-    if (e.length >= 3) return;
-    let t = null;
-    if (state.isTutorial && 1 === state.currentPlayer && 1 === state.tutorialStep) t = SKILLS.find(e => 2 === e.id);
-    else if (state.overrideNextCard[state.currentPlayer]) {
-        const e = state.overrideNextCard[state.currentPlayer];
-        t = SKILLS.find(t => t.id === e), delete state.overrideNextCard[state.currentPlayer]
-    } else t = SKILLS[Math.floor(Math.random() * SKILLS.length)];
-    t && 1 !== t.id && e.push(t)
+    const playerHand = state.hands[state.currentPlayer];
+    if (playerHand.length >= MAX_HAND_SIZE) return;
+    const currentPlayer = state.currentPlayer;
+    let nextSkill = null;
+    if (state.isTutorial && 1 === currentPlayer && 1 === state.tutorialStep) nextSkill = SKILLS.find(skill => 2 === skill.id);
+    else if (state.overrideNextCard[currentPlayer]) {
+        const forcedId = state.overrideNextCard[currentPlayer];
+        nextSkill = SKILLS.find(skill => skill.id === forcedId), delete state.overrideNextCard[currentPlayer]
+    } else {
+        const ownedIds = new Set(playerHand.map(skill => skill.id));
+        const fixedOrder = state.fixedSkillOrder && state.fixedSkillOrder[currentPlayer] || [2, 4, 5, 7, 8, 9, 12];
+        const nextId = fixedOrder.find(id => !ownedIds.has(id));
+        if (nextId) nextSkill = SKILLS.find(skill => skill.id === nextId);
+        if (!nextSkill) {
+            const fallbackSkill = SKILLS.find(skill => 1 !== skill.id && !ownedIds.has(skill.id));
+            if (fallbackSkill) nextSkill = fallbackSkill;
+        }
+    }
+    nextSkill && 1 !== nextSkill.id && playerHand.push(nextSkill)
 }
 
 function renderHandUI() {
     if (!elements.skillsList) return;
+    const displayPlayer = getDisplayHandPlayer();
+    const displayHand = state.hands[displayPlayer] || [];
+    const canInteract = displayPlayer === state.currentPlayer && !("pve" === state.mode && 2 === state.currentPlayer);
     elements.skillsList.innerHTML = "";
-    const e = state.hands[state.currentPlayer],
-        t = !("pve" === state.mode && 2 === state.currentPlayer);
-    e.forEach((e, n) => {
+    displayHand.forEach((e, n) => {
         const a = document.createElement("div");
-        a.className = "skill-card-item", a.innerHTML = `\n      <div class="card-title">${e.name}</div>\n      <div class="card-desc">${e.desc}</div>\n    `, t && "ACTION_OR_PLACE" === state.phase && setupSkillDragAndDrop(a, e, n), elements.skillsList.appendChild(a)
+        a.className = "skill-card-item", a.innerHTML = `\n      <div class="card-title">${e.name}</div>\n      <div class="card-desc">${e.desc}</div>\n    `, canInteract && "ACTION_OR_PLACE" === state.phase && setupSkillDragAndDrop(a, e, n), elements.skillsList.appendChild(a)
     })
 }
 
