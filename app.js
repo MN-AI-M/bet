@@ -184,7 +184,7 @@ function cleanupMatchingTimers() {
 function showMatchingOverlay() {
     let e = document.getElementById("matching-overlay");
     e || (e = document.createElement("div"), e.id = "matching-overlay", e.className = "tutorial-overlay", e.innerHTML = '\n      <div class="tutorial-box">\n        <p id="matching-text">対戦相手を探しています...</p>\n        <p style="font-size:2rem; color:#ffd700; margin:10px 0;" id="matching-count">10</p>\n        <button id="cancel-match-btn" style="padding:6px 12px; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">キャンセル</button>\n      </div>\n    ', document.body.appendChild(e), document.getElementById("cancel-match-btn").addEventListener("click", () => {
-        cleanupMatchingTimers(), peer && peer.destroy(), peer = null, e.classList.add("hidden"), state.mode = "menu"
+        cleanupMatchingTimers(), cleanupP2PTimers(), peer && peer.destroy(), peer = null, conn && conn.close(), conn = null, state.matchSessionId = 0, e.classList.add("hidden"), state.mode = "menu"
     })), e.classList.remove("hidden")
 }
 
@@ -279,7 +279,7 @@ let peer = null,
     p2pCountdownInterval = null,
     p2pRetryTimer = null,
     p2pRetryAttempts = 0;
-const HOST_ID = `skill-tac-${location.hostname.replace(/[^a-zA-Z0-9_-]/g, "-")}`,
+const HOST_ID = `skilltac${location.hostname.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`,
     PEER_CONFIG = {
         debug: 1
     };
@@ -433,28 +433,42 @@ function renderHandUI() {
 
 function setupSkillDragAndDrop(e, t, n) {
     let a = null;
+    let dragging = !1;
+    let dragTarget = null;
     e.addEventListener("pointerdown", r => {
         if ("matching" === state.mode || "menu" === state.mode) return;
         if (isAiThinking || state.isGameOver || "pve" === state.mode && 2 === state.currentPlayer) return;
         if (0 !== r.button && "mouse" === r.pointerType) return;
+        dragging = !0;
+        dragTarget = null;
         e.setPointerCapture(r.pointerId);
         const o = t => {
                 a || (a = document.createElement("div"), a.className = "skill-drag-cursor", document.body.appendChild(a), e.style.opacity = "0.4"), a.style.left = `${t.clientX}px`, a.style.top = `${t.clientY}px`, a.style.visibility = "hidden";
                 const n = document.elementFromPoint(t.clientX, t.clientY);
                 a.style.visibility = "visible";
                 const r = n ? n.closest(".cell") : null;
-                document.querySelectorAll(".cell").forEach(e => e.classList.remove("drag-over")), r && r.classList.add("drag-over")
+                dragTarget = r && elements.board.contains(r) ? r : null;
+                document.querySelectorAll(".cell").forEach(e => e.classList.remove("drag-over")), dragTarget && dragTarget.classList.add("drag-over")
             },
             s = r => {
+                if (!dragging) return;
+                dragging = !1;
+                const droppedTarget = dragTarget;
+                dragTarget = null;
                 if (e.removeEventListener("pointermove", o), e.removeEventListener("pointerup", s), e.style.opacity = "1", document.querySelectorAll(".cell").forEach(e => e.classList.remove("drag-over")), a) {
                     a.style.visibility = "hidden";
-                    const e = document.elementFromPoint(r.clientX, r.clientY);
                     a.remove(), a = null;
-                    const o = e ? e.closest(".cell") : null;
-                    o && (state.hands[state.currentPlayer].splice(n, 1), executeSkill(t.id, o))
+                    const o = droppedTarget;
+                    if (!o || !elements.board.contains(o)) return;
+                    const skillIndex = state.hands[state.currentPlayer].indexOf(t);
+                    skillIndex >= 0 && (state.hands[state.currentPlayer].splice(skillIndex, 1), executeSkill(t.id, o))
                 }
             };
-        e.addEventListener("pointermove", o), e.addEventListener("pointerup", s)
+        e.addEventListener("pointermove", o), document.addEventListener("pointerup", s, {
+            once: !0
+        }), document.addEventListener("pointercancel", s, {
+            once: !0
+        })
     })
 }
 
@@ -1070,12 +1084,43 @@ function advanceTutorialStep2() {
     document.getElementById("tutorial-text").textContent = "獲得した一手消去カードをドラッグしてBotの石を消しましょう", animateTutorialGuide(), setTimeout(() => {
         const e = elements.skillsList.children[0],
             t = elements.board.querySelector('.cell[data-row="4"][data-col="3"]');
-        e && e.classList.add("tutorial-highlight"), t && t.classList.add("tutorial-highlight")
+        e && e.classList.add("tutorial-highlight"), t && t.classList.add("tutorial-highlight"), e && t && animateTutorialDrag(e, t)
     }, 100)
+}
+
+function animateTutorialDrag(source, target) {
+    clearTutorialDrag();
+    const sourceRect = source.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const guide = document.createElement("div");
+    const startX = sourceRect.left + sourceRect.width / 2 - 12;
+    const startY = sourceRect.top + sourceRect.height / 2 - 12;
+    const deltaX = targetRect.left + targetRect.width / 2 - 12 - startX;
+    const deltaY = targetRect.top + targetRect.height / 2 - 12 - startY;
+    guide.className = "tutorial-drag-guide";
+    guide.setAttribute("aria-hidden", "true");
+    guide.style.left = `${startX}px`;
+    guide.style.top = `${startY}px`;
+    document.body.appendChild(guide);
+    guide.animate([
+        { transform: "translate(0, 0)", opacity: 0.15 },
+        { transform: `translate(${deltaX}px, ${deltaY}px)`, opacity: 0.55 },
+        { transform: `translate(${deltaX}px, ${deltaY}px)`, opacity: 0.15 }
+    ], {
+        duration: 1800,
+        iterations: Infinity,
+        easing: "ease-in-out"
+    })
+}
+
+function clearTutorialDrag() {
+    const guide = document.querySelector(".tutorial-drag-guide");
+    guide && guide.remove()
 }
 
 function finishTutorial() {
     clearTutorialHighlights();
+    clearTutorialDrag();
     const e = document.getElementById("tutorial-text");
     e && (e.textContent = "チュートリアルが終わります"), setTimeout(() => {
         document.getElementById("tutorial-overlay").classList.add("hidden"), state.isTutorial = !1, state.tutorialStep = 0, showTitleScreen()
@@ -1085,5 +1130,5 @@ function finishTutorial() {
 function clearTutorialHighlights() {
     document.querySelectorAll(".tutorial-highlight").forEach(e => {
         e.classList.remove("tutorial-highlight")
-    })
+    }), clearTutorialDrag()
 }

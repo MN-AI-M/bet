@@ -12,25 +12,13 @@
         }
     }
 
-    function addTutorialCardClickFallback() {
-        const card = document.querySelector('#skills-list .skill-card-item');
-        if (!card || card.dataset.tutorialClickFallback === '1') return;
-        card.dataset.tutorialClickFallback = '1';
-        card.addEventListener('click', () => {
-            if (!state.isTutorial || state.tutorialStep !== 2 || state.phase !== 'ACTION_OR_PLACE') return;
-            state.hands[1].splice(0, 1);
-            executeSkill(2);
-            renderHandUI()
-        })
-    }
     const originalAdvanceTutorialStep2 = window.advanceTutorialStep2;
     if (typeof originalAdvanceTutorialStep2 === 'function') {
         window.advanceTutorialStep2 = () => {
             originalAdvanceTutorialStep2();
             if (state.isTutorial && state.tutorialStep === 2 && state.hands[1].length > 1) {
                 state.hands[1] = state.hands[1].slice(0, 1);
-                renderHandUI();
-                addTutorialCardClickFallback()
+                renderHandUI()
             }
         }
     }

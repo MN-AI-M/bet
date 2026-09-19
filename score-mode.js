@@ -310,7 +310,7 @@
             if (!dragCursor) return;
             dragCursor.style.left = `${event.clientX}px`;
             dragCursor.style.top = `${event.clientY}px`;
-            const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.cell');
+            const target = dragTarget;
             if (dragTarget && dragTarget !== target) dragTarget.classList.remove('drag-over');
             dragTarget = target || null;
             if (dragTarget) dragTarget.classList.add('drag-over')
@@ -341,7 +341,7 @@
             event.stopImmediatePropagation();
             const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.cell');
             const skillIndex = state.hands[state.currentPlayer].indexOf(draggedSkill);
-            if (target && skillIndex >= 0) {
+            if (target && elements.board.contains(target) && skillIndex >= 0) {
                 state.hands[state.currentPlayer].splice(skillIndex, 1);
                 executeSkill(draggedSkill.id, target);
                 renderHandUI()
